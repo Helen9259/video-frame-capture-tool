@@ -85,8 +85,6 @@
     display:flex;align-items:center;justify-content:center; flex:0 0 auto;
   }
   .brand-mark svg{ width:15px;height:15px; }
-  .brand-trust{ display:flex; align-items:center; gap:6px; color:var(--text-faint); font-size:12px; }
-  .brand-trust .dot{ width:5px;height:5px;border-radius:50%;background:var(--success); box-shadow:0 0 0 3px var(--success-tint); }
 
   .nav-switch{ display:flex; gap:2px; background:var(--surface-sunken); border:1px solid var(--border); border-radius:8px; padding:2px; }
   .nav-switch button{
@@ -286,6 +284,14 @@
   .result-thumb{ flex:0 0 auto; width:78px;height:78px; border-radius:8px; border:1px solid var(--border); position:relative; overflow:hidden; background:var(--surface-sunken); }
   .result-thumb img{ width:100%; height:100%; object-fit:cover; display:block; }
   .result-thumb .dim{ position:absolute; left:4px; bottom:4px; font-size:9px; padding:1px 4px; border-radius:4px; background:rgba(0,0,0,.55); color:#fff; font-family:var(--font-mono); }
+  .result-thumb .thumb-delete{
+    position:absolute; top:4px; right:4px; width:20px; height:20px; border-radius:6px;
+    background:rgba(20,10,10,.6); border:none; color:#fff; display:flex; align-items:center; justify-content:center;
+    cursor:pointer; opacity:0; transition:opacity .1s ease, background .1s ease;
+  }
+  .result-thumb .thumb-delete svg{ width:12px;height:12px; }
+  .result-thumb:hover .thumb-delete{ opacity:1; }
+  .result-thumb .thumb-delete:hover{ background:var(--danger); }
   .drawer-empty{ padding:10px 16px 14px; color:var(--text-faint); font-size:12.5px; }
 
   /* toast */
@@ -422,9 +428,13 @@
   .row-ext-select{ display:flex; gap:2px; background:var(--surface-sunken); border:1px solid var(--border); border-radius:7px; padding:2px; width:fit-content; }
   .row-ext-select button{ border:none; background:transparent; color:var(--text-secondary); font-size:11px; font-weight:700; padding:4px 9px; border-radius:5px; cursor:pointer; }
   .row-ext-select button.active{ background:var(--surface); color:var(--accent-strong); box-shadow:var(--shadow-sm); }
+  .row-actions{ display:flex; align-items:center; gap:6px; }
   .row-dl{ width:30px;height:30px; border-radius:8px; border:1px solid var(--border-strong); background:var(--surface); display:flex; align-items:center; justify-content:center; cursor:pointer; color:var(--text); }
   .row-dl:hover{ border-color:var(--text-faint); }
   .row-dl svg{ width:14px;height:14px; }
+  .row-del{ width:30px;height:30px; border-radius:8px; border:1px solid var(--border-strong); background:var(--surface); display:flex; align-items:center; justify-content:center; cursor:pointer; color:var(--text-secondary); }
+  .row-del:hover{ border-color:var(--danger); color:var(--danger); background:var(--danger-tint-soft); }
+  .row-del svg{ width:14px;height:14px; }
 
   /* grid view (hidden by default) */
   .results-grid{ display:none; grid-template-columns:repeat(auto-fill, minmax(168px, 1fr)); gap:14px; }
@@ -439,6 +449,9 @@
   .result-dim-badge{ position:absolute; bottom:8px; left:8px; font-size:10.5px; padding:2px 6px; border-radius:5px; background:rgba(0,0,0,.55); color:#fff; font-family:var(--font-mono); }
   .result-dl{ position:absolute; bottom:8px; right:8px; width:26px;height:26px; border-radius:7px; background:rgba(255,255,255,.92); border:none; display:flex;align-items:center;justify-content:center; color:#20242C; cursor:pointer; z-index:2; }
   .result-dl svg{ width:14px;height:14px; }
+  .result-del{ position:absolute; bottom:8px; right:40px; width:26px;height:26px; border-radius:7px; background:rgba(255,255,255,.92); border:none; display:flex;align-items:center;justify-content:center; color:#20242C; cursor:pointer; z-index:2; }
+  .result-del:hover{ background:var(--danger); color:#fff; }
+  .result-del svg{ width:14px;height:14px; }
   .result-card-info{ padding:8px 10px 10px; position:relative; }
   .result-card .row-filename-row input{ font-size:11.5px; padding:3px 4px; }
 
@@ -451,7 +464,6 @@
     <div class="brand">
       <span class="brand-mark"><svg viewBox="0 0 24 24" fill="none" class="icon-white"><path d="M4 7a2 2 0 0 1 2-2h7l2 2h5a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><circle cx="13" cy="14" r="3.2" stroke="currentColor" stroke-width="1.8"/></svg></span>
       썸네일 생성기
-      <span class="brand-trust"><span class="dot"></span>로컬 처리 · 서버 업로드 없음</span>
     </div>
     <div class="nav-switch" role="tablist" aria-label="화면 전환">
       <button type="button" class="active" data-screen="empty">업로드</button>
@@ -618,10 +630,9 @@
             결과물 <span class="drawer-count" id="drawer-count">0개</span>
           </div>
           <div class="drawer-actions">
-            <button class="btn btn-sm" type="button" data-screen="results">전체 보기</button>
-            <button class="btn btn-sm btn-primary" type="button" id="drawer-zip-btn">
-              <svg viewBox="0 0 24 24" fill="none"><path d="M12 15V4M12 15l-3.5-3.5M12 15l3.5-3.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
-              ZIP 다운로드
+            <button class="btn btn-sm btn-primary" type="button" id="drawer-next-btn" disabled>
+              다음
+              <svg viewBox="0 0 24 24" fill="none"><path d="M5 12h14m0 0-5-5m5 5-5 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
             </button>
           </div>
         </div>
@@ -690,7 +701,7 @@
               <th>파일명</th>
               <th style="width:110px;">사이즈</th>
               <th style="width:100px;">확장자</th>
-              <th style="width:44px;"></th>
+              <th style="width:80px;"></th>
             </tr>
           </thead>
           <tbody id="file-table-body"></tbody>
@@ -989,6 +1000,7 @@
   function updateNavEnabled(){
     $('nav-workspace').disabled = files.length === 0;
     $('nav-results').disabled = results.length === 0;
+    $('drawer-next-btn').disabled = results.length === 0;
   }
 
   /* ============ file intake ============ */
@@ -1674,6 +1686,13 @@
     renderCaptureMarks();
     updateNavEnabled();
   }
+  function deleteResult(id){
+    var idx = results.findIndex(function(r){ return r.id === id; });
+    if (idx === -1) return;
+    URL.revokeObjectURL(results[idx].url);
+    results.splice(idx, 1);
+    afterGenerate();
+  }
 
   /* ============ re-encode (per-row / bulk extension change) ============ */
   async function reencodeResult(r, newFormat){
@@ -1705,8 +1724,19 @@
       return;
     }
     strip.innerHTML = results.slice(0, 24).map(function(r){
-      return '<div class="result-thumb"><img src="' + r.url + '" alt=""><span class="dim">' + r.width + '×' + r.height + '</span></div>';
+      return '' +
+        '<div class="result-thumb">' +
+          '<img src="' + r.url + '" alt="">' +
+          '<span class="dim">' + r.width + '×' + r.height + '</span>' +
+          '<button type="button" class="thumb-delete" title="삭제" data-del-id="' + r.id + '"><svg viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>' +
+        '</div>';
     }).join('');
+    strip.querySelectorAll('[data-del-id]').forEach(function(btn){
+      btn.addEventListener('click', function(e){
+        e.stopPropagation();
+        deleteResult(btn.getAttribute('data-del-id'));
+      });
+    });
   }
   $('drawer-head').addEventListener('click', function(e){
     if (e.target.closest('button')) return;
@@ -1716,7 +1746,7 @@
     strip.style.display = collapsed ? 'flex' : 'none';
     chevron.style.transform = collapsed ? '' : 'rotate(180deg)';
   });
-  $('drawer-zip-btn').addEventListener('click', function(){ downloadZip(results, 'thumbnails.zip'); });
+  $('drawer-next-btn').addEventListener('click', function(){ if (!$('drawer-next-btn').disabled) showScreen('results'); });
 
   /* ============ duplicate detection + classification ============ */
   function computeDuplicateCounts(){
@@ -1777,7 +1807,10 @@
           '</td>' +
           '<td class="row-dim tabular">' + r.width + '×' + r.height + '</td>' +
           '<td><div class="row-ext-select" data-ext-id="' + r.id + '"><button type="button" class="' + (r.ext==='png'?'active':'') + '" data-format="png">PNG</button><button type="button" class="' + (r.ext==='jpg'?'active':'') + '" data-format="jpeg">JPG</button></div></td>' +
-          '<td><button class="row-dl" title="다운로드" data-dl-id="' + r.id + '"><svg viewBox="0 0 24 24" fill="none"><path d="M12 15V4M12 15l-3.5-3.5M12 15l3.5-3.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button></td>' +
+          '<td><div class="row-actions">' +
+            '<button class="row-dl" title="다운로드" data-dl-id="' + r.id + '"><svg viewBox="0 0 24 24" fill="none"><path d="M12 15V4M12 15l-3.5-3.5M12 15l3.5-3.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button>' +
+            '<button class="row-del" title="삭제" data-del-id="' + r.id + '"><svg viewBox="0 0 24 24" fill="none"><path d="M5 7h14M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2m2 0-.8 12.1A2 2 0 0 1 14.2 21H9.8a2 2 0 0 1-2-1.9L7 7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>' +
+          '</div></td>' +
         '</tr>';
     }).join('');
 
@@ -1824,6 +1857,12 @@
         triggerBlobDownload(r.blob, resultFilename(r));
       });
     });
+    container.querySelectorAll('[data-del-id]').forEach(function(btn){
+      btn.addEventListener('click', function(e){
+        e.stopPropagation();
+        deleteResult(btn.getAttribute('data-del-id'));
+      });
+    });
   }
 
   function renderResultsGrid(){
@@ -1845,6 +1884,7 @@
             '<span class="result-select' + (r.selected ? ' checked' : '') + '">' + (r.selected ? '<svg viewBox="0 0 24 24" fill="none"><path d="m5 13 4 4L19 7" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>' : '') + '</span>' +
             '<span class="result-dim-badge tabular">' + r.width + '×' + r.height + '</span>' +
             '<button class="result-dl" title="다운로드" data-dl-id="' + r.id + '"><svg viewBox="0 0 24 24" fill="none"><path d="M12 15V4M12 15l-3.5-3.5M12 15l3.5-3.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button>' +
+            '<button class="result-del" title="삭제" data-del-id="' + r.id + '"><svg viewBox="0 0 24 24" fill="none"><path d="M5 7h14M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2m2 0-.8 12.1A2 2 0 0 1 14.2 21H9.8a2 2 0 0 1-2-1.9L7 7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>' +
           '</div>' +
           '<div class="result-card-info">' +
             '<div class="row-filename-row' + (isDup ? ' dup' : '') + '"><input type="text" value="' + escapeHtml(r.baseName) + '" data-rename-id="' + r.id + '" spellcheck="false"></div>' +
@@ -1853,7 +1893,7 @@
     }).join('');
     grid.querySelectorAll('[data-toggle-id]').forEach(function(el){
       el.addEventListener('click', function(e){
-        if (e.target.closest('[data-dl-id]')) return;
+        if (e.target.closest('[data-dl-id]') || e.target.closest('[data-del-id]')) return;
         var r = results.find(function(rr){ return rr.id === el.getAttribute('data-toggle-id'); });
         r.selected = !r.selected;
         renderResultsList(); renderResultsGrid();
