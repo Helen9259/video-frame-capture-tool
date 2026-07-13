@@ -1,0 +1,1449 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>프레임 캡처 — 영상 순간 캡처 도구</title>
+<style>
+  :root{
+    --bg:#F4F5F7;
+    --surface:#FFFFFF;
+    --surface-sunken:#EDEFF2;
+    --border:#DFE2E7;
+    --border-strong:#C7CCD4;
+    --text:#1B2028;
+    --text-secondary:#6B7280;
+    --text-faint:#9AA1AC;
+    --accent:#3A5FA8;
+    --accent-strong:#2C4B8C;
+    --accent-tint:#E9EFF9;
+    --accent-tint-strong:#D7E1F4;
+    --success:#2E9469;
+    --success-tint:#E4F4EC;
+    --warning:#B4740A;
+    --warning-tint:#FBF0DD;
+    --danger:#B4432D;
+    --danger-tint:#F6E4E1;
+    --shadow-sm: 0 1px 2px rgba(20,24,33,0.06);
+    --shadow-md: 0 4px 16px rgba(20,24,33,0.10);
+    --radius-sm:6px;
+    --radius-md:10px;
+    --radius-lg:14px;
+    --font-ui:'Pretendard',-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Segoe UI',Roboto,'Malgun Gothic',sans-serif;
+    --font-mono: ui-monospace,'SFMono-Regular',Menlo,Consolas,monospace;
+  }
+  :root[data-theme="dark"]{
+    --bg:#181B21; --surface:#20242C; --surface-sunken:#1B1F26;
+    --border:#333844; --border-strong:#454C5A;
+    --text:#EDEFF3; --text-secondary:#9BA2B0; --text-faint:#6C7382;
+    --accent:#6E93D9; --accent-strong:#8AAEF0;
+    --accent-tint:#25324C; --accent-tint-strong:#2C3E5F;
+    --success:#4FBE8F; --success-tint:#1D3329;
+    --warning:#E0A542; --warning-tint:#3A2E17;
+    --danger:#E38268; --danger-tint:#3E2620;
+    --shadow-sm: 0 1px 2px rgba(0,0,0,0.3);
+    --shadow-md: 0 8px 24px rgba(0,0,0,0.4);
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#181B21; --surface:#20242C; --surface-sunken:#1B1F26;
+      --border:#333844; --border-strong:#454C5A;
+      --text:#EDEFF3; --text-secondary:#9BA2B0; --text-faint:#6C7382;
+      --accent:#6E93D9; --accent-strong:#8AAEF0;
+      --accent-tint:#25324C; --accent-tint-strong:#2C3E5F;
+      --success:#4FBE8F; --success-tint:#1D3329;
+      --warning:#E0A542; --warning-tint:#3A2E17;
+      --danger:#E38268; --danger-tint:#3E2620;
+      --shadow-sm: 0 1px 2px rgba(0,0,0,0.3);
+      --shadow-md: 0 8px 24px rgba(0,0,0,0.4);
+    }
+  }
+
+  *{box-sizing:border-box;}
+  html,body{height:100%;}
+  body{
+    margin:0; background:var(--bg); color:var(--text);
+    font-family:var(--font-ui); font-size:14px; line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+  }
+  .tabular{ font-variant-numeric:tabular-nums; font-family:var(--font-mono); }
+  button{font-family:inherit;}
+  ::selection{ background:var(--accent-tint-strong); }
+
+  .app{ display:flex; flex-direction:column; height:100vh; min-height:640px; }
+
+  .topbar{
+    flex:0 0 auto; display:flex; align-items:center; justify-content:space-between;
+    gap:16px; padding:0 20px; height:56px;
+    background:var(--surface); border-bottom:1px solid var(--border);
+  }
+  .brand{ display:flex; align-items:center; gap:10px; font-weight:700; font-size:15px; letter-spacing:-0.01em; }
+  .brand-mark{
+    width:26px;height:26px; border-radius:7px; background:var(--accent);
+    display:flex;align-items:center;justify-content:center; flex:0 0 auto;
+  }
+  .brand-mark svg{ width:15px;height:15px; }
+  .brand-trust{ display:flex; align-items:center; gap:6px; color:var(--text-faint); font-size:12px; }
+  .brand-trust .dot{ width:5px;height:5px;border-radius:50%;background:var(--success); box-shadow:0 0 0 3px var(--success-tint); }
+
+  .nav-switch{ display:flex; gap:2px; background:var(--surface-sunken); border:1px solid var(--border); border-radius:8px; padding:2px; }
+  .nav-switch button{
+    border:none; background:transparent; color:var(--text-secondary); font-size:12.5px;
+    padding:6px 12px; border-radius:6px; cursor:pointer; transition:background .12s ease, color .12s ease;
+  }
+  .nav-switch button.active{ background:var(--surface); color:var(--text); box-shadow:var(--shadow-sm); font-weight:600; }
+  .nav-switch button:hover:not(.active):not(:disabled){ color:var(--text); }
+  .nav-switch button:disabled{ opacity:.4; cursor:not-allowed; }
+
+  .screen{ display:none; flex:1 1 auto; min-height:0; }
+  .screen.active{ display:flex; flex-direction:column; }
+
+  .btn{
+    display:inline-flex; align-items:center; justify-content:center; gap:6px;
+    height:34px; padding:0 14px; border-radius:8px; font-size:13px; font-weight:600;
+    border:1px solid var(--border-strong); background:var(--surface); color:var(--text);
+    cursor:pointer; white-space:nowrap; transition:border-color .12s ease, background .12s ease, transform .04s ease;
+  }
+  .btn:hover:not(:disabled){ border-color:var(--text-faint); }
+  .btn:active:not(:disabled){ transform:translateY(1px); }
+  .btn:focus-visible{ outline:2px solid var(--accent); outline-offset:2px; }
+  .btn svg{ width:15px;height:15px; flex:0 0 auto; }
+  .btn-primary{ background:var(--accent); border-color:var(--accent); color:#fff; }
+  .btn-primary:hover:not(:disabled){ background:var(--accent-strong); border-color:var(--accent-strong); }
+  .btn-ghost{ border-color:transparent; background:transparent; }
+  .btn-ghost:hover:not(:disabled){ background:var(--surface-sunken); border-color:transparent; }
+  .btn-sm{ height:28px; padding:0 10px; font-size:12.5px; border-radius:7px; }
+  .btn-icon{ width:30px; padding:0; }
+  .btn:disabled{ opacity:.45; cursor:not-allowed; }
+  .hidden-input{ display:none; }
+
+  /* ---------- Empty / upload screen ---------- */
+  .empty-screen{ flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:40px 20px; gap:28px; }
+  .dropzone{
+    width:min(560px, 90vw); border:1.5px dashed var(--border-strong); border-radius:var(--radius-lg);
+    background:var(--surface); padding:52px 40px; display:flex; flex-direction:column; align-items:center;
+    text-align:center; gap:16px; transition:border-color .15s ease, background .15s ease;
+  }
+  .dropzone.drag{ border-color:var(--accent); background:var(--accent-tint); }
+  .dropzone-icon{
+    width:56px;height:56px; border-radius:14px; background:var(--accent-tint);
+    display:flex;align-items:center;justify-content:center; color:var(--accent);
+  }
+  .dropzone-icon svg{ width:28px;height:28px; }
+  .dropzone h1{ margin:0; font-size:18px; font-weight:700; letter-spacing:-0.01em; text-wrap:balance; }
+  .dropzone p{ margin:0; color:var(--text-secondary); font-size:13.5px; max-width:360px; text-wrap:balance; }
+  .dropzone-actions{ display:flex; gap:8px; margin-top:6px; }
+  .dropzone .btn-primary{ height:38px; padding:0 20px; font-size:13.5px; }
+  .dropzone .formats{ color:var(--text-faint); font-size:12px; }
+  .feature-row{ display:flex; gap:28px; flex-wrap:wrap; justify-content:center; }
+  .feature-row .feature{ display:flex; align-items:center; gap:7px; color:var(--text-secondary); font-size:12.5px; }
+  .feature-row svg{ width:15px;height:15px; color:var(--success); flex:0 0 auto; }
+
+  /* ---------- Workspace ---------- */
+  .workspace{ flex:1; display:grid; grid-template-columns:236px 1fr 296px; min-height:0; }
+
+  .panel-videos{ border-right:1px solid var(--border); background:var(--surface); display:flex; flex-direction:column; min-height:0; }
+  .panel-head{ flex:0 0 auto; display:flex; align-items:center; justify-content:space-between; padding:14px 14px 10px; }
+  .panel-head h2{ margin:0; font-size:12.5px; font-weight:700; color:var(--text-secondary); text-transform:uppercase; letter-spacing:.04em; }
+  .video-list{ flex:1 1 auto; overflow-y:auto; padding:2px 8px 12px; display:flex; flex-direction:column; gap:3px; }
+  .video-item{
+    display:flex; gap:9px; align-items:center; padding:7px; border-radius:9px; cursor:pointer;
+    border:1px solid transparent; text-align:left; background:transparent; width:100%;
+  }
+  .video-item:hover{ background:var(--surface-sunken); }
+  .video-item.selected{ background:var(--accent-tint); border-color:var(--accent-tint-strong); }
+  .video-thumb{
+    width:52px;height:38px; border-radius:6px; flex:0 0 auto; position:relative; overflow:hidden;
+    background:linear-gradient(135deg,#8A6A3E,#C99A56); background-size:cover; background-position:center;
+  }
+  .video-thumb.p1{ background-image:linear-gradient(135deg,#8A6A3E,#C99A56); }
+  .video-thumb.p2{ background-image:linear-gradient(135deg,#7C5A9E,#B98FD6); }
+  .video-thumb.p3{ background-image:linear-gradient(135deg,#4E7A6B,#89B79E); }
+  .video-thumb::after{ content:""; position:absolute; inset:0; background:radial-gradient(circle at 50% 50%, rgba(0,0,0,0) 0 40%, rgba(0,0,0,.18) 100%); }
+  .video-thumb .play{ position:absolute; inset:0; display:flex;align-items:center;justify-content:center; color:#fff; }
+  .video-thumb .play svg{ width:13px;height:13px; filter:drop-shadow(0 1px 2px rgba(0,0,0,.4)); }
+  .video-thumb .spin{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center; }
+  .video-meta{ min-width:0; flex:1; }
+  .video-name{ font-size:12.5px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .video-sub{ display:flex; align-items:center; gap:5px; margin-top:2px; }
+  .video-dur{ font-size:11px; color:var(--text-faint); font-family:var(--font-mono); }
+  .chip{ display:inline-flex; align-items:center; gap:4px; font-size:10.5px; font-weight:600; padding:1.5px 6px; border-radius:99px; }
+  .chip-ready{ background:var(--success-tint); color:var(--success); }
+  .chip-processing{ background:var(--warning-tint); color:var(--warning); }
+  .chip-error{ background:var(--danger-tint); color:var(--danger); }
+  .chip .dot{ width:4px;height:4px;border-radius:50%;background:currentColor; }
+  .video-list-footer{ flex:0 0 auto; padding:10px 14px 14px; border-top:1px solid var(--border); }
+  .video-list-empty{ padding:24px 14px; color:var(--text-faint); font-size:12.5px; text-align:center; }
+
+  .panel-preview{ display:flex; flex-direction:column; min-width:0; min-height:0; background:var(--bg); }
+  .preview-stage{ flex:1 1 auto; min-height:0; display:flex; align-items:center; justify-content:center; padding:22px 22px 12px; }
+  .video-frame{
+    position:relative; width:100%; max-width:640px; aspect-ratio:16/9; border-radius:var(--radius-md);
+    overflow:hidden; background:#12151a; box-shadow:var(--shadow-md); display:flex; align-items:flex-end;
+  }
+  .video-frame video{ position:absolute; inset:0; width:100%; height:100%; object-fit:contain; background:#12151a; }
+  .video-frame .center-play{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center; z-index:2; }
+  .center-play button{
+    width:52px;height:52px; border-radius:50%; border:none; background:rgba(255,255,255,.92); color:#20242C;
+    display:flex;align-items:center;justify-content:center; cursor:pointer; box-shadow:0 4px 14px rgba(0,0,0,.3);
+  }
+  .center-play svg{ width:20px;height:20px; margin-left:2px; }
+  .frame-timecode{
+    position:relative; z-index:2; margin:12px; padding:3px 8px; border-radius:6px;
+    background:rgba(0,0,0,.55); color:#fff; font-size:11.5px; font-family:var(--font-mono);
+  }
+  .frame-badge-topright{
+    position:absolute; top:12px; right:12px; z-index:2; padding:3px 8px; border-radius:6px;
+    background:rgba(0,0,0,.55); color:#fff; font-size:11px; font-family:var(--font-mono);
+  }
+  .video-frame-empty{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center; color:var(--text-faint); font-size:12.5px; z-index:1; }
+
+  .transport{ flex:0 0 auto; padding:6px 22px 18px; }
+  .scrub-row{ display:flex; align-items:center; gap:10px; margin-bottom:10px; }
+  .time-label{ font-family:var(--font-mono); font-size:12px; color:var(--text-secondary); flex:0 0 auto; min-width:44px; }
+  .time-label.end{ text-align:right; color:var(--text-faint); }
+  .scrubber{ flex:1; position:relative; height:26px; display:flex; align-items:center; cursor:pointer; touch-action:none; }
+  .scrubber .track{ position:absolute; left:0;right:0;top:50%; height:5px; transform:translateY(-50%); border-radius:99px; background:var(--border-strong); overflow:hidden; }
+  .scrubber .fill{ position:absolute; left:0; top:0; bottom:0; width:0%; background:var(--accent); transition:width .1s linear; }
+  .scrubber .marks{ position:absolute; inset:0; }
+  .scrubber .mark{ position:absolute; top:50%; transform:translate(-50%,-50%); width:2px; height:11px; border-radius:1px; background:#fff; border:1px solid var(--accent-strong); pointer-events:none; }
+  .scrubber .handle{ position:absolute; top:50%; left:0%; width:14px;height:14px; border-radius:50%; background:#fff; border:2.5px solid var(--accent); transform:translate(-50%,-50%); box-shadow:var(--shadow-sm); transition:left .1s linear; }
+  .transport-controls{ display:flex; align-items:center; justify-content:space-between; gap:14px; }
+  .transport-left{ display:flex; align-items:center; gap:4px; }
+  .transport-left .btn{ height:32px; }
+
+  .panel-presets{ border-left:1px solid var(--border); background:var(--surface); display:flex; flex-direction:column; min-height:0; }
+  .format-row{ flex:0 0 auto; display:flex; align-items:center; justify-content:space-between; padding:0 14px 12px; }
+  .format-label{ font-size:12.5px; color:var(--text-secondary); font-weight:600; }
+  .format-toggle{ display:flex; gap:2px; background:var(--surface-sunken); border:1px solid var(--border); border-radius:7px; padding:2px; }
+  .format-toggle button{ border:none; background:transparent; color:var(--text-secondary); font-size:11.5px; font-weight:700; padding:5px 11px; border-radius:5px; cursor:pointer; letter-spacing:.02em; }
+  .format-toggle button.active{ background:var(--surface); color:var(--accent-strong); box-shadow:var(--shadow-sm); }
+  .preset-list{ flex:1 1 auto; overflow-y:auto; padding:2px 12px 12px; display:flex; flex-direction:column; gap:8px; }
+  .preset-card{ display:flex; align-items:center; gap:10px; padding:10px 10px; border:1px solid var(--border); border-radius:10px; cursor:pointer; background:var(--surface); }
+  .preset-card:hover{ border-color:var(--border-strong); }
+  .preset-card.checked{ border-color:var(--accent); background:var(--accent-tint); }
+  .checkbox{ width:17px;height:17px; border-radius:5px; border:1.5px solid var(--border-strong); flex:0 0 auto; display:flex;align-items:center;justify-content:center; background:var(--surface); }
+  .preset-card.checked .checkbox{ background:var(--accent); border-color:var(--accent); color:#fff; }
+  .checkbox svg{ width:11px;height:11px; }
+  .ratio-swatch{ flex:0 0 auto; width:30px;height:30px; border-radius:6px; background:var(--surface-sunken); border:1px solid var(--border); display:flex;align-items:center;justify-content:center; }
+  .ratio-swatch i{ display:block; background:var(--text-faint); border-radius:1.5px; }
+  .preset-info{ min-width:0; flex:1; }
+  .preset-name{ font-size:13.5px; font-weight:700; }
+  .preset-footer{ flex:0 0 auto; padding:12px 14px 14px; border-top:1px solid var(--border); display:flex; flex-direction:column; gap:8px; }
+  .preset-footer .btn-primary{ width:100%; height:40px; font-size:13.5px; }
+  .preset-footer .hint{ font-size:11.5px; color:var(--text-faint); text-align:center; }
+
+  .drawer{ grid-column:2 / span 2; border-top:1px solid var(--border); border-left:1px solid var(--border); background:var(--surface); display:flex; flex-direction:column; max-height:150px; }
+  .drawer-head{ flex:0 0 auto; display:flex; align-items:center; justify-content:space-between; padding:9px 16px; cursor:pointer; }
+  .drawer-head-left{ display:flex; align-items:center; gap:8px; font-size:12.5px; font-weight:600; }
+  .drawer-head-left .chevron{ color:var(--text-faint); display:flex; transition:transform .15s ease; }
+  .drawer-head-left .chevron svg{ width:14px;height:14px; }
+  .drawer-count{ color:var(--text-secondary); font-weight:400; }
+  .drawer-actions{ display:flex; gap:8px; }
+  .drawer-strip{ flex:1 1 auto; overflow-x:auto; overflow-y:hidden; display:flex; gap:8px; padding:0 16px 12px; }
+  .result-thumb{ flex:0 0 auto; width:78px;height:78px; border-radius:8px; border:1px solid var(--border); position:relative; overflow:hidden; background:var(--surface-sunken); }
+  .result-thumb img{ width:100%; height:100%; object-fit:cover; display:block; }
+  .result-thumb .dim{ position:absolute; left:4px; bottom:4px; font-size:9px; padding:1px 4px; border-radius:4px; background:rgba(0,0,0,.55); color:#fff; font-family:var(--font-mono); }
+  .drawer-empty{ padding:10px 16px 14px; color:var(--text-faint); font-size:12.5px; }
+
+  .toast{ position:fixed; right:20px; bottom:20px; width:280px; background:var(--surface); border:1px solid var(--border); border-radius:12px; box-shadow:var(--shadow-md); padding:14px 14px 12px; z-index:50; display:none; }
+  .toast.show{ display:block; }
+  .toast-head{ display:flex; align-items:center; gap:9px; margin-bottom:9px; }
+  .spinner{ width:15px;height:15px; border-radius:50%; border:2px solid var(--accent-tint-strong); border-top-color:var(--accent); animation:spin .8s linear infinite; flex:0 0 auto; }
+  @media (prefers-reduced-motion: reduce){ .spinner{ animation-duration:1.6s; } }
+  @keyframes spin{ to{ transform:rotate(360deg); } }
+  .toast-warn-icon{ display:none; width:15px;height:15px; color:var(--danger); flex:0 0 auto; }
+  .toast-warn-icon svg{ width:100%; height:100%; }
+  .toast.toast-error .spinner{ display:none; }
+  .toast.toast-error .toast-warn-icon{ display:block; }
+  .toast.toast-error .toast-title{ color:var(--danger); }
+  .toast.toast-error .progress-fill{ background:var(--danger); }
+  .toast-title{ font-size:12.5px; font-weight:700; }
+  .toast-sub{ font-size:11.5px; color:var(--text-secondary); margin-top:1px; white-space:normal; overflow:hidden; text-overflow:ellipsis; }
+  .progress-track{ height:5px; border-radius:99px; background:var(--surface-sunken); overflow:hidden; }
+  .progress-fill{ height:100%; width:0%; background:var(--accent); border-radius:99px; transition:width .15s ease; }
+  .toast-foot{ display:flex; justify-content:space-between; margin-top:7px; font-size:11px; color:var(--text-faint); font-family:var(--font-mono); }
+
+  .modal-backdrop{ position:fixed; inset:0; background:rgba(15,17,22,.42); display:none; align-items:center; justify-content:center; z-index:100; padding:20px; }
+  .modal-backdrop.open{ display:flex; }
+  .modal{ width:min(520px, 100%); max-height:min(640px, 90vh); background:var(--surface); border-radius:var(--radius-lg); box-shadow:var(--shadow-md); display:flex; flex-direction:column; overflow:hidden; }
+  .modal-head{ flex:0 0 auto; display:flex; align-items:center; justify-content:space-between; padding:16px 18px; border-bottom:1px solid var(--border); }
+  .modal-head h2{ margin:0; font-size:15px; font-weight:700; }
+  .modal-body{ flex:1 1 auto; overflow-y:auto; padding:16px 18px; display:flex; flex-direction:column; gap:14px; }
+  .field-label{ font-size:12px; font-weight:600; color:var(--text-secondary); margin-bottom:6px; display:block; }
+  .manage-list{ display:flex; flex-direction:column; border:1px solid var(--border); border-radius:10px; overflow:hidden; }
+  .manage-row{ display:flex; align-items:center; gap:10px; padding:10px 12px; border-bottom:1px solid var(--border); background:var(--surface); }
+  .manage-row:last-child{ border-bottom:none; }
+  .manage-row .ratio-swatch{ width:26px;height:26px; }
+  .manage-row .preset-info{ flex:1; }
+  .manage-row-actions{ display:flex; gap:4px; flex:0 0 auto; }
+  .icon-btn{ width:28px;height:28px; border-radius:7px; border:1px solid transparent; background:transparent; color:var(--text-secondary); display:flex;align-items:center;justify-content:center; cursor:pointer; }
+  .icon-btn:hover{ background:var(--surface-sunken); color:var(--text); }
+  .icon-btn.danger:hover{ background:var(--danger-tint); color:var(--danger); }
+  .icon-btn.confirm:hover{ background:var(--success-tint); color:var(--success); }
+  .icon-btn svg{ width:14px;height:14px; }
+  .manage-empty{ padding:16px 12px; color:var(--text-faint); font-size:12.5px; text-align:center; }
+
+  .edit-row-fields{ display:flex; gap:6px; align-items:center; }
+  .edit-row-fields input.input{ height:30px; font-size:12.5px; }
+  .edit-row-fields .dim-input{ width:64px; }
+
+  .new-preset-form{ border:1px solid var(--border); border-radius:10px; padding:14px; background:var(--surface-sunken); }
+  .form-grid{ display:grid; grid-template-columns:1fr 88px auto 88px; gap:8px; align-items:end; }
+  .form-grid-dims{ grid-template-columns:100px auto 100px; justify-content:start; }
+  .input{ width:100%; height:34px; border-radius:8px; border:1px solid var(--border-strong); background:var(--surface); color:var(--text); padding:0 10px; font-size:13px; font-family:inherit; }
+  .input.mono{ font-family:var(--font-mono); text-align:center; padding:0 4px; }
+  .input:focus-visible{ outline:2px solid var(--accent); outline-offset:1px; border-color:var(--accent); }
+  .dim-x{ text-align:center; color:var(--text-faint); font-size:13px; padding-bottom:8px; }
+  .form-hint{ font-size:11.5px; color:var(--danger); margin-top:8px; min-height:14px; }
+  .modal-foot{ flex:0 0 auto; padding:14px 18px; border-top:1px solid var(--border); display:flex; justify-content:flex-end; gap:8px; }
+
+  .results-screen{ flex:1; display:flex; flex-direction:column; min-height:0; }
+  .results-bar{ flex:0 0 auto; display:flex; align-items:center; justify-content:space-between; gap:16px; padding:16px 24px; background:var(--surface); border-bottom:1px solid var(--border); flex-wrap:wrap; }
+  .results-title{ display:flex; flex-direction:column; gap:2px; }
+  .results-title h1{ margin:0; font-size:16px; font-weight:700; letter-spacing:-.01em; }
+  .results-title p{ margin:0; font-size:12.5px; color:var(--text-secondary); }
+  .results-actions{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+
+  .filter-row{ flex:0 0 auto; display:flex; gap:6px; padding:12px 24px 0; flex-wrap:wrap; }
+  .filter-chip{ border:1px solid var(--border); background:var(--surface); color:var(--text-secondary); font-size:12px; padding:6px 12px; border-radius:99px; cursor:pointer; }
+  .filter-chip.active{ background:var(--accent-tint); border-color:var(--accent-tint-strong); color:var(--accent-strong); font-weight:600; }
+
+  .results-grid-wrap{ flex:1 1 auto; overflow-y:auto; padding:16px 24px 28px; }
+  .results-grid{ display:grid; grid-template-columns:repeat(auto-fill, minmax(168px, 1fr)); gap:14px; }
+  .results-empty{ display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; padding:60px 20px; color:var(--text-faint); text-align:center; }
+  .result-card{ border:1px solid var(--border); border-radius:12px; background:var(--surface); overflow:hidden; display:flex; flex-direction:column; }
+  .result-card-media{ position:relative; background:var(--surface-sunken); cursor:pointer; }
+  .result-card-media img{ width:100%; height:100%; object-fit:cover; display:block; }
+  .result-select{ position:absolute; top:8px; left:8px; width:19px;height:19px; border-radius:5px; background:rgba(255,255,255,.88); border:1.5px solid rgba(255,255,255,.9); display:flex; align-items:center; justify-content:center; z-index:2; }
+  .result-select.checked{ background:var(--accent); border-color:var(--accent); color:#fff; }
+  .result-select svg{ width:12px;height:12px; }
+  .result-dim-badge{ position:absolute; bottom:8px; left:8px; font-size:10.5px; padding:2px 6px; border-radius:5px; background:rgba(0,0,0,.55); color:#fff; font-family:var(--font-mono); }
+  .result-dl{ position:absolute; bottom:8px; right:8px; width:26px;height:26px; border-radius:7px; background:rgba(255,255,255,.92); border:none; display:flex;align-items:center;justify-content:center; color:#20242C; cursor:pointer; z-index:2; }
+  .result-dl svg{ width:14px;height:14px; }
+  .result-card-info{ padding:8px 10px 10px; }
+  .result-time{ font-size:11px; color:var(--text-faint); font-family:var(--font-mono); margin-bottom:4px; }
+  .result-filename-row{ display:flex; align-items:center; gap:0; border:1px solid transparent; border-radius:6px; }
+  .result-filename-row input{
+    flex:1; min-width:0; border:none; background:transparent; color:var(--text);
+    font-size:11.5px; font-weight:600; padding:3px 4px; border-radius:5px; font-family:inherit;
+  }
+  .result-filename-row input:hover{ background:var(--surface-sunken); }
+  .result-filename-row input:focus-visible{ outline:2px solid var(--accent); outline-offset:0; background:var(--surface); }
+  .result-filename-row .ext{ font-size:11.5px; color:var(--text-faint); font-family:var(--font-mono); padding-right:4px; flex:0 0 auto; }
+  .results-grid.rename-mode .result-filename-row{ border-color:var(--accent-tint-strong); background:var(--accent-tint); }
+  .btn.active{ background:var(--accent-tint); border-color:var(--accent-tint-strong); color:var(--accent-strong); }
+
+  .icon-white{ color:#fff; }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="topbar">
+    <div class="brand">
+      <span class="brand-mark"><svg viewBox="0 0 24 24" fill="none" class="icon-white"><path d="M4 7a2 2 0 0 1 2-2h7l2 2h5a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><circle cx="13" cy="14" r="3.2" stroke="currentColor" stroke-width="1.8"/></svg></span>
+      프레임 캡처
+      <span class="brand-trust"><span class="dot"></span>로컬 처리 · 서버 업로드 없음</span>
+    </div>
+    <div class="nav-switch" role="tablist" aria-label="화면 전환">
+      <button type="button" class="active" data-screen="empty">업로드</button>
+      <button type="button" data-screen="workspace" id="nav-workspace" disabled>작업 화면</button>
+      <button type="button" data-screen="results" id="nav-results" disabled>결과 화면</button>
+    </div>
+  </div>
+
+  <!-- SCREEN: UPLOAD -->
+  <div class="screen active" id="screen-empty">
+    <div class="empty-screen">
+      <div class="dropzone" id="dropzone">
+        <div class="dropzone-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M12 15V4M12 4l-3.5 3.5M12 4l3.5 3.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        <h1 id="dropzone-title">영상 파일을 이곳에 드래그하세요</h1>
+        <p id="dropzone-sub">파일 여러 개 또는 폴더째 드래그해도 안에 있는 영상을 모두 인식합니다</p>
+        <div class="dropzone-actions">
+          <button type="button" class="btn btn-primary" id="pick-files-btn">
+            <svg viewBox="0 0 24 24" fill="none"><path d="M4 7a2 2 0 0 1 2-2h7l2 2h5a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
+            파일 선택
+          </button>
+          <button type="button" class="btn" id="pick-folder-btn">폴더째 선택</button>
+        </div>
+        <span class="formats">지원 형식: 브라우저가 재생 가능한 MP4, WebM, MOV 등</span>
+      </div>
+      <div class="feature-row">
+        <span class="feature"><svg viewBox="0 0 24 24" fill="none"><path d="m5 13 4 4L19 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>브라우저에서 즉시 처리</span>
+        <span class="feature"><svg viewBox="0 0 24 24" fill="none"><path d="m5 13 4 4L19 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>서버로 전송되지 않음</span>
+        <span class="feature"><svg viewBox="0 0 24 24" fill="none"><path d="m5 13 4 4L19 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>설치·로그인 불필요</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCREEN: WORKSPACE -->
+  <div class="screen" id="screen-workspace">
+    <div class="workspace">
+      <div class="panel-videos">
+        <div class="panel-head">
+          <h2 id="video-count-label">영상 목록 · 0개</h2>
+          <button class="btn btn-icon btn-ghost" type="button" id="add-video-icon-btn" title="영상 추가">
+            <svg viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+          </button>
+        </div>
+        <div class="video-list" id="video-list"></div>
+        <div class="video-list-footer">
+          <button type="button" class="btn" id="add-video-footer-btn" style="width:100%;">
+            <svg viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+            영상 더 추가하기
+          </button>
+        </div>
+      </div>
+
+      <div class="panel-preview">
+        <div class="preview-stage">
+          <div class="video-frame" id="video-frame">
+            <video id="main-video" playsinline preload="auto"></video>
+            <span class="video-frame-empty" id="video-frame-empty">영상을 선택하세요</span>
+            <span class="frame-badge-topright" id="frame-res-badge" style="display:none;"></span>
+            <div class="center-play" id="center-play" style="display:none;">
+              <button type="button" id="center-play-btn" title="재생"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7L8 5Z"/></svg></button>
+            </div>
+            <span class="frame-timecode tabular" id="frame-timecode" style="display:none;">00:00 / 00:00</span>
+          </div>
+        </div>
+        <div class="transport">
+          <div class="scrub-row">
+            <span class="time-label tabular" id="time-current">00:00</span>
+            <div class="scrubber" id="scrubber">
+              <div class="track"><div class="fill" id="scrub-fill"></div></div>
+              <div class="marks" id="scrub-marks"></div>
+              <div class="handle" id="scrub-handle"></div>
+            </div>
+            <span class="time-label end tabular" id="time-total">00:00</span>
+          </div>
+          <div class="transport-controls">
+            <div class="transport-left">
+              <button class="btn btn-icon" type="button" id="step-back-btn" title="이전 프레임">
+                <svg viewBox="0 0 24 24" fill="none"><path d="M11 19V5l-9 7 9 7Z" fill="currentColor"/><rect x="14" y="5" width="2.4" height="14" fill="currentColor"/></svg>
+              </button>
+              <button class="btn btn-icon" type="button" id="playpause-btn" title="재생">
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7L8 5Z"/></svg>
+              </button>
+              <button class="btn btn-icon" type="button" id="step-fwd-btn" title="다음 프레임">
+                <svg viewBox="0 0 24 24" fill="none"><path d="M13 19V5l9 7-9 7Z" fill="currentColor"/><rect x="7.6" y="5" width="2.4" height="14" fill="currentColor"/></svg>
+              </button>
+            </div>
+            <button class="btn btn-primary" type="button" id="capture-btn">
+              <svg viewBox="0 0 24 24" fill="none"><path d="M4 7a2 2 0 0 1 2-2h1.2l1-1.5h7.6l1 1.5H18a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><circle cx="12" cy="12.5" r="3.1" stroke="currentColor" stroke-width="1.8"/></svg>
+              이 프레임 캡처
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel-presets">
+        <div class="panel-head">
+          <h2>저장 사이즈</h2>
+          <button class="btn btn-sm btn-ghost" type="button" id="open-preset-modal">
+            <svg viewBox="0 0 24 24" fill="none"><path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z" stroke="currentColor" stroke-width="1.6"/><path d="M19.4 13.5c.1-.5.1-1 0-1.5l1.6-1.2-1.5-2.6-1.9.6c-.4-.3-.8-.6-1.3-.8l-.3-2H12l-.3 2c-.5.2-.9.5-1.3.8l-1.9-.6-1.5 2.6L8.6 12c-.1.5-.1 1 0 1.5l-1.6 1.2 1.5 2.6 1.9-.6c.4.3.8.6 1.3.8l.3 2h3l.3-2c.5-.2.9-.5 1.3-.8l1.9.6 1.5-2.6-1.6-1.2Z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>
+            관리
+          </button>
+        </div>
+        <div class="format-row">
+          <span class="format-label">저장 포맷</span>
+          <div class="format-toggle" id="format-toggle" role="tablist" aria-label="저장 포맷 선택">
+            <button type="button" class="active" data-format="png">PNG</button>
+            <button type="button" data-format="jpeg">JPG</button>
+          </div>
+        </div>
+        <div class="preset-list" id="preset-list"></div>
+        <div class="preset-footer">
+          <button class="btn btn-primary" type="button" id="capture-btn-2">선택한 사이즈로 캡처</button>
+          <span class="hint">체크된 사이즈마다 이미지가 1장씩 생성됩니다</span>
+        </div>
+      </div>
+
+      <div class="drawer">
+        <div class="drawer-head" id="drawer-head">
+          <div class="drawer-head-left">
+            <span class="chevron" id="drawer-chevron"><svg viewBox="0 0 24 24" fill="none"><path d="m6 15 6-6 6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+            캡처된 이미지 <span class="drawer-count" id="drawer-count">0장</span>
+          </div>
+          <div class="drawer-actions">
+            <button class="btn btn-sm" type="button" data-screen="results">전체 보기</button>
+            <button class="btn btn-sm btn-primary" type="button" id="drawer-zip-btn">
+              <svg viewBox="0 0 24 24" fill="none"><path d="M12 15V4M12 15l-3.5-3.5M12 15l3.5-3.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+              ZIP 다운로드
+            </button>
+          </div>
+        </div>
+        <div class="drawer-strip" id="drawer-strip"></div>
+      </div>
+    </div>
+
+    <div class="toast" id="toast">
+      <div class="toast-head">
+        <span class="spinner" id="toast-spinner"></span>
+        <span class="toast-warn-icon" id="toast-warn-icon"><svg viewBox="0 0 24 24" fill="none"><path d="M12 9v4m0 4h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg></span>
+        <div>
+          <div class="toast-title" id="toast-title">처리 중…</div>
+          <div class="toast-sub" id="toast-sub"></div>
+        </div>
+      </div>
+      <div class="progress-track"><div class="progress-fill" id="toast-progress"></div></div>
+      <div class="toast-foot"><span id="toast-count"></span><span id="toast-pct">0%</span></div>
+    </div>
+  </div>
+
+  <!-- SCREEN: RESULTS -->
+  <div class="screen" id="screen-results">
+    <div class="results-screen">
+      <div class="results-bar">
+        <div class="results-title">
+          <h1>캡처 결과</h1>
+          <p id="results-sub">총 0장</p>
+        </div>
+        <div class="results-actions">
+          <button class="btn" type="button" data-screen="workspace">← 작업 화면으로</button>
+          <button class="btn" type="button" id="rename-mode-btn">
+            <svg viewBox="0 0 24 24" fill="none"><path d="m16.5 4.5 3 3L8 19H5v-3L16.5 4.5Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
+            파일명 수정
+          </button>
+          <button class="btn" type="button" id="download-selected-btn">선택 항목 다운로드</button>
+          <button class="btn btn-primary" type="button" id="download-all-btn">
+            <svg viewBox="0 0 24 24" fill="none"><path d="M12 15V4M12 15l-3.5-3.5M12 15l3.5-3.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+            <span id="download-all-label">전체 ZIP 다운로드</span>
+          </button>
+        </div>
+      </div>
+      <div class="filter-row" id="filter-row"></div>
+      <div class="results-grid-wrap">
+        <div class="results-grid" id="results-grid"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: preset management -->
+<div class="modal-backdrop" id="preset-modal">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="preset-modal-title">
+    <div class="modal-head">
+      <h2 id="preset-modal-title">사이즈 프리셋 관리</h2>
+      <button class="btn btn-icon btn-ghost" type="button" id="close-preset-modal" aria-label="닫기">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div>
+        <span class="field-label">저장된 프리셋</span>
+        <div class="manage-list" id="manage-list"></div>
+      </div>
+      <div class="new-preset-form">
+        <span class="field-label">새 프리셋 추가</span>
+        <div class="form-grid form-grid-dims">
+          <div><input class="input mono" type="number" placeholder="1920" id="new-preset-width" min="1"></div>
+          <div class="dim-x">×</div>
+          <div><input class="input mono" type="number" placeholder="1080" id="new-preset-height" min="1"></div>
+        </div>
+        <div class="form-hint" id="new-preset-hint"></div>
+        <div style="display:flex; justify-content:flex-end; margin-top:2px;">
+          <button class="btn btn-primary btn-sm" type="button" id="add-preset-btn">
+            <svg viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+            추가
+          </button>
+        </div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-primary" type="button" id="close-preset-modal-2">닫기</button>
+    </div>
+  </div>
+</div>
+
+<input type="file" id="file-input" class="hidden-input" accept="video/*" multiple>
+<input type="file" id="folder-input" class="hidden-input" webkitdirectory directory multiple>
+<video id="thumb-gen" class="hidden-input" muted playsinline preload="auto"></video>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ============ small utils ============ */
+  var _uid = 1;
+  function uid(){ return 'id' + (_uid++) + '_' + Math.random().toString(36).slice(2,7); }
+  function formatTime(sec){
+    sec = Math.max(0, sec || 0);
+    var m = Math.floor(sec/60), s = Math.floor(sec%60);
+    return (m<10?'0':'')+m+':'+(s<10?'0':'')+s;
+  }
+  function clamp(v,min,max){ return Math.min(max, Math.max(min, v)); }
+  function escapeHtml(str){
+    return String(str).replace(/[&<>"']/g, function(c){
+      return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+    });
+  }
+  function sanitizeFilename(str){
+    return String(str).replace(/[\\/:*?"<>|]/g, '_');
+  }
+  function resultFilename(r){
+    return (sanitizeFilename(r.baseName).trim() || 'capture') + '.' + r.ext;
+  }
+  function swatchDims(w,h,max){
+    max = max || 20;
+    var r = w/h, sw, sh;
+    if (r >= 1){ sw = max; sh = Math.round(max/r); } else { sh = max; sw = Math.round(max*r); }
+    return { sw: Math.max(3,sw), sh: Math.max(3,sh) };
+  }
+  function drawCover(ctx, source, sw0, sh0, w, h){
+    var scale = Math.max(w/sw0, h/sh0);
+    var sw = w/scale, sh = h/scale;
+    var sx = (sw0-sw)/2, sy = (sh0-sh)/2;
+    ctx.drawImage(source, sx, sy, sw, sh, 0, 0, w, h);
+  }
+
+  /* ============ ZIP writer (store, no compression) — self-contained, no external libs ============ */
+  var CRC_TABLE = (function(){
+    var table = [];
+    for (var n = 0; n < 256; n++){
+      var c = n;
+      for (var k = 0; k < 8; k++){ c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1); }
+      table[n] = c >>> 0;
+    }
+    return table;
+  })();
+  function crc32(bytes){
+    var crc = 0xFFFFFFFF;
+    for (var i = 0; i < bytes.length; i++){ crc = (crc >>> 8) ^ CRC_TABLE[(crc ^ bytes[i]) & 0xFF]; }
+    return (crc ^ 0xFFFFFFFF) >>> 0;
+  }
+  function dosDateTime(date){
+    var time = ((date.getHours() & 0x1F) << 11) | ((date.getMinutes() & 0x3F) << 5) | ((date.getSeconds() >> 1) & 0x1F);
+    var day = (((date.getFullYear() - 1980) & 0x7F) << 9) | (((date.getMonth() + 1) & 0xF) << 5) | (date.getDate() & 0x1F);
+    return { time: time, date: day };
+  }
+  async function buildZip(files, onProgress){
+    var textEnc = new TextEncoder();
+    var parts = [], central = [], offset = 0;
+    var dt = dosDateTime(new Date());
+    for (var i = 0; i < files.length; i++){
+      var f = files[i];
+      var nameBytes = textEnc.encode(f.name);
+      var data = new Uint8Array(await f.blob.arrayBuffer());
+      var crc = crc32(data);
+
+      var lh = new Uint8Array(30 + nameBytes.length);
+      var ldv = new DataView(lh.buffer);
+      ldv.setUint32(0, 0x04034b50, true);
+      ldv.setUint16(4, 20, true);
+      ldv.setUint16(6, 0x0800, true); // UTF-8 filename flag (bit 11) — required for non-ASCII names to survive round-trip
+      ldv.setUint16(8, 0, true);
+      ldv.setUint16(10, dt.time, true);
+      ldv.setUint16(12, dt.date, true);
+      ldv.setUint32(14, crc, true);
+      ldv.setUint32(18, data.length, true);
+      ldv.setUint32(22, data.length, true);
+      ldv.setUint16(26, nameBytes.length, true);
+      ldv.setUint16(28, 0, true);
+      lh.set(nameBytes, 30);
+      parts.push(lh, data);
+
+      var ch = new Uint8Array(46 + nameBytes.length);
+      var cdv = new DataView(ch.buffer);
+      cdv.setUint32(0, 0x02014b50, true);
+      cdv.setUint16(4, 20, true);
+      cdv.setUint16(6, 20, true);
+      cdv.setUint16(8, 0x0800, true); // UTF-8 filename flag, mirrors local header
+      cdv.setUint16(10, 0, true);
+      cdv.setUint16(12, dt.time, true);
+      cdv.setUint16(14, dt.date, true);
+      cdv.setUint32(16, crc, true);
+      cdv.setUint32(20, data.length, true);
+      cdv.setUint32(24, data.length, true);
+      cdv.setUint16(28, nameBytes.length, true);
+      cdv.setUint16(30, 0, true);
+      cdv.setUint16(32, 0, true);
+      cdv.setUint16(34, 0, true);
+      cdv.setUint16(36, 0, true);
+      cdv.setUint32(38, 0, true);
+      cdv.setUint32(42, offset, true);
+      ch.set(nameBytes, 46);
+      central.push(ch);
+
+      offset += lh.length + data.length;
+      if (onProgress) onProgress(i, files.length);
+      await new Promise(function(r){ requestAnimationFrame(r); });
+    }
+    var centralSize = central.reduce(function(s,c){ return s + c.length; }, 0);
+    var eocd = new Uint8Array(22);
+    var edv = new DataView(eocd.buffer);
+    edv.setUint32(0, 0x06054b50, true);
+    edv.setUint16(4, 0, true);
+    edv.setUint16(6, 0, true);
+    edv.setUint16(8, files.length, true);
+    edv.setUint16(10, files.length, true);
+    edv.setUint32(12, centralSize, true);
+    edv.setUint32(16, offset, true);
+    edv.setUint16(20, 0, true);
+    return new Blob(parts.concat(central).concat([eocd]), { type: 'application/zip' });
+  }
+  function triggerBlobDownload(blob, filename){
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(function(){ URL.revokeObjectURL(url); }, 4000);
+  }
+
+  /* ============ state ============ */
+  var videos = [];        // {id, file, name, url, duration, thumbDataURL, status, colorClass}
+  var currentVideoId = null;
+  var presets = [];       // {id, name, width, height, checked}
+  var editingPresetId = null;
+  var results = [];       // {id, blob, url, width, height, sourceId, sourceName, timeLabel, baseName, ext, selected}
+  var resultFilter = 'all';
+  var thumbQueue = [];
+  var thumbBusy = false;
+  var colorClasses = ['p1','p2','p3'];
+  var currentFormat = 'png'; // 'png' | 'jpeg'
+  var filenameEditMode = false;
+
+  function defaultPresets(){
+    return [
+      { id: uid(), width: 1920, height: 1080, checked: true }
+    ];
+  }
+  function loadPresets(){
+    try{
+      var raw = localStorage.getItem('capture-tool-presets-v2');
+      if (raw){
+        var arr = JSON.parse(raw);
+        if (Array.isArray(arr) && arr.length){
+          return arr.map(function(p){ return { id: uid(), width: p.width, height: p.height, checked: true }; });
+        }
+      }
+    }catch(e){}
+    return defaultPresets();
+  }
+  function savePresets(){
+    try{
+      localStorage.setItem('capture-tool-presets-v2', JSON.stringify(presets.map(function(p){
+        return { width: p.width, height: p.height };
+      })));
+    }catch(e){}
+  }
+  presets = loadPresets();
+
+  /* ============ DOM refs ============ */
+  var $ = function(id){ return document.getElementById(id); };
+  var mainVideo = $('main-video');
+  var thumbGen = $('thumb-gen');
+  var scrubberEl = $('scrubber');
+
+  /* ============ screen nav ============ */
+  var screenIds = { empty: 'screen-empty', workspace: 'screen-workspace', results: 'screen-results' };
+  function showScreen(name){
+    Object.keys(screenIds).forEach(function(k){
+      $(screenIds[k]).classList.toggle('active', k === name);
+    });
+    document.querySelectorAll('.nav-switch [data-screen]').forEach(function(btn){
+      btn.classList.toggle('active', btn.getAttribute('data-screen') === name);
+    });
+  }
+  document.querySelectorAll('[data-screen]').forEach(function(el){
+    el.addEventListener('click', function(){
+      if (el.disabled) return;
+      showScreen(el.getAttribute('data-screen'));
+    });
+  });
+  function updateNavEnabled(){
+    $('nav-workspace').disabled = videos.length === 0;
+    $('nav-results').disabled = results.length === 0;
+  }
+
+  /* ============ file intake ============ */
+  var fileInput = $('file-input');
+  var folderInput = $('folder-input');
+  $('pick-files-btn').addEventListener('click', function(){ fileInput.click(); });
+  $('pick-folder-btn').addEventListener('click', function(){ folderInput.click(); });
+  $('add-video-icon-btn').addEventListener('click', function(){ fileInput.click(); });
+  $('add-video-footer-btn').addEventListener('click', function(){ fileInput.click(); });
+
+  fileInput.addEventListener('change', function(){
+    addVideos(Array.prototype.filter.call(fileInput.files, isVideoFile));
+    fileInput.value = '';
+  });
+  folderInput.addEventListener('change', function(){
+    addVideos(Array.prototype.filter.call(folderInput.files, isVideoFile));
+    folderInput.value = '';
+  });
+  function isVideoFile(f){
+    return /^video\//.test(f.type) || /\.(mp4|webm|mov|m4v|ogv|ogg)$/i.test(f.name);
+  }
+
+  var dropzone = $('dropzone');
+  ['dragenter','dragover'].forEach(function(evt){
+    dropzone.addEventListener(evt, function(e){ e.preventDefault(); dropzone.classList.add('drag'); });
+  });
+  ['dragleave','drop'].forEach(function(evt){
+    dropzone.addEventListener(evt, function(e){ e.preventDefault(); dropzone.classList.remove('drag'); });
+  });
+  dropzone.addEventListener('drop', async function(e){
+    var files = await collectFilesFromDataTransfer(e.dataTransfer);
+    addVideos(files.filter(isVideoFile));
+  });
+  document.addEventListener('dragover', function(e){ e.preventDefault(); });
+  document.addEventListener('drop', function(e){ if (!e.target.closest('#dropzone')) e.preventDefault(); });
+
+  function readDirEntries(dirEntry){
+    return new Promise(function(resolve){
+      var reader = dirEntry.createReader();
+      var all = [];
+      (function readBatch(){
+        reader.readEntries(function(entries){
+          if (!entries.length){ resolve(all); return; }
+          all = all.concat(entries);
+          readBatch();
+        }, function(){ resolve(all); });
+      })();
+    });
+  }
+  async function collectFromEntry(entry, out){
+    if (!entry) return;
+    if (entry.isFile){
+      await new Promise(function(res){ entry.file(function(f){ out.push(f); res(); }, function(){ res(); }); });
+    } else if (entry.isDirectory){
+      var entries = await readDirEntries(entry);
+      for (var i = 0; i < entries.length; i++){ await collectFromEntry(entries[i], out); }
+    }
+  }
+  async function collectFilesFromDataTransfer(dt){
+    var out = [];
+    if (dt.items && dt.items.length && dt.items[0].webkitGetAsEntry){
+      var entries = [];
+      for (var i = 0; i < dt.items.length; i++){
+        var en = dt.items[i].webkitGetAsEntry && dt.items[i].webkitGetAsEntry();
+        if (en) entries.push(en);
+      }
+      for (var j = 0; j < entries.length; j++){ await collectFromEntry(entries[j], out); }
+    } else if (dt.files){
+      out = Array.prototype.slice.call(dt.files);
+    }
+    return out;
+  }
+
+  function addVideos(files){
+    if (!files.length) return;
+    files.forEach(function(f, idx){
+      var v = {
+        id: uid(), file: f, name: f.name, url: URL.createObjectURL(f),
+        duration: 0, thumbDataURL: null, status: 'loading',
+        colorClass: colorClasses[videos.length % colorClasses.length]
+      };
+      videos.push(v);
+      thumbQueue.push(v);
+    });
+    processThumbQueue();
+    renderVideoList();
+    updateDropzoneText();
+    updateNavEnabled();
+    if (!currentVideoId) selectVideo(videos[0].id);
+    showScreen('workspace');
+  }
+
+  function updateDropzoneText(){
+    if (videos.length){
+      $('dropzone-title').textContent = '영상을 더 추가하려면 드래그하세요';
+      $('dropzone-sub').textContent = '현재 ' + videos.length + '개 영상이 업로드되어 있어요';
+    } else {
+      $('dropzone-title').textContent = '영상 파일을 이곳에 드래그하세요';
+      $('dropzone-sub').textContent = '파일 여러 개 또는 폴더째 드래그해도 안에 있는 영상을 모두 인식합니다';
+    }
+  }
+
+  /* ============ thumbnail generation (sequential, single hidden video element) ============ */
+  function processThumbQueue(){
+    if (thumbBusy || !thumbQueue.length) return;
+    thumbBusy = true;
+    var v = thumbQueue.shift();
+
+    function cleanup(){
+      thumbGen.removeEventListener('loadedmetadata', onLoaded);
+      thumbGen.removeEventListener('seeked', onSeeked);
+      thumbGen.removeEventListener('error', onError);
+      thumbBusy = false;
+      renderVideoList();
+      if (currentVideoId === v.id) updateFrameResBadge();
+      processThumbQueue();
+    }
+    function onLoaded(){
+      v.duration = thumbGen.duration || 0;
+      try{ thumbGen.currentTime = Math.min(0.5, v.duration * 0.1) || 0; }
+      catch(e){ onSeeked(); }
+    }
+    function onSeeked(){
+      try{
+        var c = document.createElement('canvas');
+        c.width = 160; c.height = 90;
+        drawCover(c.getContext('2d'), thumbGen, thumbGen.videoWidth || 160, thumbGen.videoHeight || 90, 160, 90);
+        v.thumbDataURL = c.toDataURL('image/jpeg', 0.82);
+        v.status = 'ready';
+      }catch(e){ v.status = 'ready'; }
+      cleanup();
+    }
+    function onError(){ v.status = 'error'; cleanup(); }
+
+    thumbGen.addEventListener('loadedmetadata', onLoaded);
+    thumbGen.addEventListener('seeked', onSeeked);
+    thumbGen.addEventListener('error', onError);
+    thumbGen.src = v.url;
+  }
+
+  /* ============ video list rendering ============ */
+  function renderVideoList(){
+    $('video-count-label').textContent = '영상 목록 · ' + videos.length + '개';
+    var container = $('video-list');
+    if (!videos.length){
+      container.innerHTML = '<div class="video-list-empty">아직 업로드된 영상이 없습니다</div>';
+      return;
+    }
+    container.innerHTML = videos.map(function(v){
+      var thumbStyle = v.thumbDataURL ? ' style="background-image:url(' + v.thumbDataURL + ')"' : '';
+      var inner;
+      if (v.status === 'loading'){
+        inner = '<span class="spin"><span class="spinner"></span></span>';
+      } else if (v.status === 'error'){
+        inner = '<span class="play"><svg viewBox="0 0 24 24" fill="none"><path d="M12 9v4m0 4h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg></span>';
+      } else {
+        inner = '<span class="play"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7L8 5Z"/></svg></span>';
+      }
+      var chip = v.status === 'loading'
+        ? '<span class="chip chip-processing"><span class="dot"></span>불러오는 중</span>'
+        : v.status === 'error'
+          ? '<span class="chip chip-error"><span class="dot"></span>재생 불가</span>'
+          : '<span class="chip chip-ready"><span class="dot"></span>준비됨</span>';
+      return '' +
+        '<button type="button" class="video-item' + (v.id === currentVideoId ? ' selected' : '') + '" data-video-id="' + v.id + '">' +
+          '<div class="video-thumb ' + v.colorClass + '"' + thumbStyle + '>' + inner + '</div>' +
+          '<div class="video-meta">' +
+            '<div class="video-name">' + escapeHtml(v.name) + '</div>' +
+            '<div class="video-sub">' +
+              '<span class="video-dur tabular">' + (v.duration ? formatTime(v.duration) : '--:--') + '</span>' +
+              chip +
+            '</div>' +
+          '</div>' +
+        '</button>';
+    }).join('');
+    container.querySelectorAll('[data-video-id]').forEach(function(el){
+      el.addEventListener('click', function(){ selectVideo(el.getAttribute('data-video-id')); });
+    });
+  }
+
+  function getVideo(id){ return videos.find(function(v){ return v.id === id; }); }
+
+  function selectVideo(id){
+    var v = getVideo(id);
+    if (!v) return;
+    currentVideoId = id;
+    mainVideo.pause();
+    mainVideo.src = v.url;
+    $('video-frame-empty').style.display = 'none';
+    renderVideoList();
+    renderCaptureMarks();
+    updatePlayIcon(true);
+    updateCaptureButtons();
+  }
+
+  mainVideo.addEventListener('loadedmetadata', function(){
+    updateFrameResBadge();
+    $('time-total').textContent = formatTime(mainVideo.duration);
+    $('frame-timecode').style.display = '';
+    updateScrubberUI();
+  });
+  mainVideo.addEventListener('timeupdate', updateScrubberUI);
+  mainVideo.addEventListener('play', function(){ $('center-play').style.display = 'none'; updatePlayIcon(false); });
+  mainVideo.addEventListener('pause', function(){ $('center-play').style.display = 'flex'; updatePlayIcon(true); });
+
+  function updateFrameResBadge(){
+    var badge = $('frame-res-badge');
+    if (mainVideo.videoWidth){
+      badge.textContent = mainVideo.videoWidth + ' × ' + mainVideo.videoHeight;
+      badge.style.display = '';
+    }
+  }
+  function updateScrubberUI(){
+    var d = mainVideo.duration || 0;
+    var ratio = d ? mainVideo.currentTime / d : 0;
+    $('scrub-fill').style.width = (ratio*100) + '%';
+    $('scrub-handle').style.left = (ratio*100) + '%';
+    $('time-current').textContent = formatTime(mainVideo.currentTime);
+    $('frame-timecode').textContent = formatTime(mainVideo.currentTime) + ' / ' + formatTime(d);
+  }
+  function updatePlayIcon(paused){
+    var icon = paused
+      ? '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7L8 5Z"/></svg>'
+      : '<svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>';
+    $('playpause-btn').innerHTML = icon;
+  }
+
+  $('center-play-btn').addEventListener('click', function(){ if (currentVideoId) mainVideo.play(); });
+  $('playpause-btn').addEventListener('click', function(){
+    if (!currentVideoId) return;
+    if (mainVideo.paused) mainVideo.play(); else mainVideo.pause();
+  });
+  $('step-back-btn').addEventListener('click', function(){ stepFrame(-1); });
+  $('step-fwd-btn').addEventListener('click', function(){ stepFrame(1); });
+  function stepFrame(dir){
+    if (!currentVideoId || !mainVideo.duration) return;
+    mainVideo.pause();
+    mainVideo.currentTime = clamp(mainVideo.currentTime + dir*(1/30), 0, mainVideo.duration);
+  }
+
+  var scrubDragging = false;
+  function ratioFromEvent(e){
+    var rect = scrubberEl.getBoundingClientRect();
+    return clamp((e.clientX - rect.left) / rect.width, 0, 1);
+  }
+  function seekTo(ratio){
+    if (!mainVideo.duration) return;
+    mainVideo.currentTime = ratio * mainVideo.duration;
+  }
+  scrubberEl.addEventListener('pointerdown', function(e){
+    if (!currentVideoId) return;
+    scrubDragging = true;
+    scrubberEl.setPointerCapture(e.pointerId);
+    seekTo(ratioFromEvent(e));
+  });
+  scrubberEl.addEventListener('pointermove', function(e){ if (scrubDragging) seekTo(ratioFromEvent(e)); });
+  scrubberEl.addEventListener('pointerup', function(){ scrubDragging = false; });
+
+  function renderCaptureMarks(){
+    var marksEl = $('scrub-marks');
+    if (!mainVideo.duration || !currentVideoId){ marksEl.innerHTML = ''; return; }
+    var marks = results.filter(function(r){ return r.sourceId === currentVideoId; });
+    marksEl.innerHTML = marks.map(function(r){
+      var ratio = r.captureTime / (getVideo(currentVideoId).duration || 1);
+      return '<span class="mark" style="left:' + (ratio*100) + '%" title="' + escapeHtml(r.timeLabel) + '"></span>';
+    }).join('');
+  }
+
+  /* ============ presets ============ */
+  function renderPresetList(){
+    var container = $('preset-list');
+    if (!presets.length){
+      container.innerHTML = '<div class="video-list-empty">등록된 사이즈가 없습니다<br>‘관리’에서 추가해보세요</div>';
+    } else {
+      container.innerHTML = presets.map(function(p){
+        var d = swatchDims(p.width, p.height, 20);
+        return '' +
+          '<div class="preset-card' + (p.checked ? ' checked' : '') + '" data-preset-id="' + p.id + '">' +
+            '<span class="checkbox">' + (p.checked ? '<svg viewBox="0 0 24 24" fill="none"><path d="m5 13 4 4L19 7" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>' : '') + '</span>' +
+            '<span class="ratio-swatch"><i style="width:' + d.sw + 'px;height:' + d.sh + 'px;"></i></span>' +
+            '<span class="preset-info">' +
+              '<span class="preset-name tabular">' + p.width + ' × ' + p.height + '</span>' +
+            '</span>' +
+          '</div>';
+      }).join('');
+    }
+    container.querySelectorAll('[data-preset-id]').forEach(function(el){
+      el.addEventListener('click', function(){
+        var p = presets.find(function(pp){ return pp.id === el.getAttribute('data-preset-id'); });
+        p.checked = !p.checked;
+        renderPresetList();
+        updateCaptureButtons();
+      });
+    });
+    updateCaptureButtons();
+  }
+
+  function updateCaptureButtons(){
+    var checked = presets.filter(function(p){ return p.checked; });
+    var canCapture = !!currentVideoId && checked.length > 0;
+    $('capture-btn').disabled = !canCapture;
+    $('capture-btn-2').disabled = !canCapture;
+    $('capture-btn-2').textContent = checked.length
+      ? '선택한 ' + checked.length + '개 사이즈로 캡처'
+      : '캡처할 사이즈를 선택하세요';
+  }
+
+  function renderPresetManageList(){
+    var container = $('manage-list');
+    if (!presets.length){
+      container.innerHTML = '<div class="manage-empty">등록된 사이즈가 없습니다. 아래에서 추가해보세요.</div>';
+      return;
+    }
+    container.innerHTML = presets.map(function(p){
+      if (p.id === editingPresetId){
+        return '' +
+          '<div class="manage-row" data-manage-id="' + p.id + '">' +
+            '<div class="edit-row-fields">' +
+              '<input class="input mono dim-input" type="number" min="1" value="' + p.width + '" data-edit="width">' +
+              '<span class="dim-x" style="padding-bottom:0;">×</span>' +
+              '<input class="input mono dim-input" type="number" min="1" value="' + p.height + '" data-edit="height">' +
+            '</div>' +
+            '<span class="manage-row-actions">' +
+              '<button class="icon-btn confirm" data-action="save" title="저장"><svg viewBox="0 0 24 24" fill="none"><path d="m5 13 4 4L19 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>' +
+              '<button class="icon-btn" data-action="cancel" title="취소"><svg viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button>' +
+            '</span>' +
+          '</div>';
+      }
+      var d = swatchDims(p.width, p.height, 16);
+      return '' +
+        '<div class="manage-row" data-manage-id="' + p.id + '">' +
+          '<span class="ratio-swatch"><i style="width:' + d.sw + 'px;height:' + d.sh + 'px;"></i></span>' +
+          '<span class="preset-info">' +
+            '<span class="preset-name tabular">' + p.width + ' × ' + p.height + '</span>' +
+          '</span>' +
+          '<span class="manage-row-actions">' +
+            '<button class="icon-btn" data-action="edit" title="수정"><svg viewBox="0 0 24 24" fill="none"><path d="m16.5 4.5 3 3L8 19H5v-3L16.5 4.5Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg></button>' +
+            '<button class="icon-btn danger" data-action="delete" title="삭제"><svg viewBox="0 0 24 24" fill="none"><path d="M5 7h14M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2m2 0-.8 12.1A2 2 0 0 1 14.2 21H9.8a2 2 0 0 1-2-1.9L7 7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>' +
+          '</span>' +
+        '</div>';
+    }).join('');
+
+    container.querySelectorAll('[data-manage-id]').forEach(function(row){
+      var id = row.getAttribute('data-manage-id');
+      var editBtn = row.querySelector('[data-action="edit"]');
+      var delBtn = row.querySelector('[data-action="delete"]');
+      var saveBtn = row.querySelector('[data-action="save"]');
+      var cancelBtn = row.querySelector('[data-action="cancel"]');
+      if (editBtn) editBtn.addEventListener('click', function(){ editingPresetId = id; renderPresetManageList(); });
+      if (delBtn) delBtn.addEventListener('click', function(){
+        presets = presets.filter(function(p){ return p.id !== id; });
+        savePresets(); renderPresetManageList(); renderPresetList();
+      });
+      if (cancelBtn) cancelBtn.addEventListener('click', function(){ editingPresetId = null; renderPresetManageList(); });
+      if (saveBtn) saveBtn.addEventListener('click', function(){
+        var p = presets.find(function(pp){ return pp.id === id; });
+        var wEl = row.querySelector('[data-edit="width"]');
+        var hEl = row.querySelector('[data-edit="height"]');
+        var w = parseInt(wEl.value, 10), h = parseInt(hEl.value, 10);
+        if (!(w > 0) || !(h > 0)) return;
+        p.width = w; p.height = h;
+        editingPresetId = null;
+        savePresets(); renderPresetManageList(); renderPresetList();
+      });
+    });
+  }
+
+  $('open-preset-modal').addEventListener('click', function(){
+    editingPresetId = null;
+    renderPresetManageList();
+    $('preset-modal').classList.add('open');
+  });
+  function closePresetModal(){ $('preset-modal').classList.remove('open'); editingPresetId = null; }
+  $('close-preset-modal').addEventListener('click', closePresetModal);
+  $('close-preset-modal-2').addEventListener('click', closePresetModal);
+  $('preset-modal').addEventListener('click', function(e){ if (e.target === $('preset-modal')) closePresetModal(); });
+
+  $('add-preset-btn').addEventListener('click', function(){
+    var wEl = $('new-preset-width'), hEl = $('new-preset-height');
+    var w = parseInt(wEl.value, 10), h = parseInt(hEl.value, 10);
+    var hint = $('new-preset-hint');
+    if (!(w > 0) || !(h > 0)){
+      hint.textContent = '가로·세로 값(1 이상)을 모두 입력해주세요.';
+      return;
+    }
+    hint.textContent = '';
+    presets.push({ id: uid(), width: w, height: h, checked: true });
+    wEl.value = ''; hEl.value = '';
+    savePresets(); renderPresetManageList(); renderPresetList();
+  });
+
+  /* ============ format toggle ============ */
+  document.querySelectorAll('#format-toggle [data-format]').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      currentFormat = btn.getAttribute('data-format');
+      document.querySelectorAll('#format-toggle [data-format]').forEach(function(b){
+        b.classList.toggle('active', b === btn);
+      });
+    });
+  });
+
+  /* ============ capture ============ */
+  // Real video files can take a moment to decode the frame at the current
+  // seek position — capturing before that finishes silently produces a
+  // blank/broken frame (or throws inside drawImage), so we wait for the
+  // video to report a decoded frame before drawing to canvas.
+  function waitUntilFrameReady(timeoutMs){
+    return new Promise(function(resolve, reject){
+      if (mainVideo.readyState >= 2 && !mainVideo.seeking){ resolve(); return; }
+      var done = false;
+      var timer = setTimeout(function(){
+        if (done) return;
+        done = true; cleanup();
+        reject(new Error('영상 프레임을 불러오는 데 시간이 오래 걸리고 있습니다. 잠시 후 다시 시도해주세요.'));
+      }, timeoutMs || 8000);
+      function onReady(){
+        if (done || mainVideo.seeking || mainVideo.readyState < 2) return;
+        done = true; clearTimeout(timer); cleanup(); resolve();
+      }
+      function cleanup(){
+        mainVideo.removeEventListener('seeked', onReady);
+        mainVideo.removeEventListener('canplay', onReady);
+        mainVideo.removeEventListener('loadeddata', onReady);
+      }
+      mainVideo.addEventListener('seeked', onReady);
+      mainVideo.addEventListener('canplay', onReady);
+      mainVideo.addEventListener('loadeddata', onReady);
+    });
+  }
+  function captureFullFrame(){
+    if (!mainVideo.videoWidth || !mainVideo.videoHeight){
+      throw new Error('영상 프레임을 아직 불러오지 못했습니다. 재생 위치를 다시 선택해보세요.');
+    }
+    var c = document.createElement('canvas');
+    c.width = mainVideo.videoWidth; c.height = mainVideo.videoHeight;
+    c.getContext('2d').drawImage(mainVideo, 0, 0, c.width, c.height);
+    return c;
+  }
+  function canvasToBlob(c, format){
+    return new Promise(function(resolve, reject){
+      try{
+        c.toBlob(function(blob){
+          if (!blob){ reject(new Error('이미지 생성에 실패했습니다.')); return; }
+          resolve(blob);
+        }, format === 'jpeg' ? 'image/jpeg' : 'image/png', format === 'jpeg' ? 0.92 : undefined);
+      }catch(err){ reject(err); }
+    });
+  }
+  async function runCapture(){
+    var checked = presets.filter(function(p){ return p.checked; });
+    if (!currentVideoId || !checked.length) return;
+    var video = getVideo(currentVideoId);
+    var captureTime = mainVideo.currentTime;
+    var timeLabel = formatTime(captureTime);
+    var format = currentFormat;
+
+    showToast('프레임 캡처 중…', video.name);
+    try{
+      await waitUntilFrameReady(8000);
+      var full = captureFullFrame();
+      for (var i = 0; i < checked.length; i++){
+        var p = checked[i];
+        updateToastProgress(i, checked.length, video.name);
+        var c = document.createElement('canvas');
+        c.width = p.width; c.height = p.height;
+        drawCover(c.getContext('2d'), full, full.width, full.height, p.width, p.height);
+        var blob = await canvasToBlob(c, format);
+        addResult(blob, p, video, timeLabel, captureTime, format);
+      }
+      hideToast();
+    }catch(err){
+      hideToast();
+      showErrorToast('캡처하지 못했습니다', (err && err.message) || '알 수 없는 오류가 발생했습니다.');
+    }
+    renderDrawerStrip();
+    renderResultsGrid();
+    renderFilterRow();
+    renderCaptureMarks();
+    updateNavEnabled();
+  }
+  function addResult(blob, preset, video, timeLabel, captureTime, format){
+    var url = URL.createObjectURL(blob);
+    var ext = format === 'jpeg' ? 'jpg' : 'png';
+    var baseName = sanitizeFilename(video.name.replace(/\.[^.]+$/, '')) + '_' + timeLabel.replace(':', '-') + '_' + preset.width + 'x' + preset.height;
+    results.unshift({
+      id: uid(), blob: blob, url: url, width: preset.width, height: preset.height,
+      sourceId: video.id, sourceName: video.name,
+      timeLabel: timeLabel, captureTime: captureTime, baseName: baseName, ext: ext, selected: true
+    });
+  }
+  $('capture-btn').addEventListener('click', runCapture);
+  $('capture-btn-2').addEventListener('click', runCapture);
+
+  /* ============ toast ============ */
+  function showToast(title, sub){
+    $('toast').classList.remove('toast-error');
+    $('toast-title').textContent = title;
+    $('toast-sub').textContent = sub;
+    $('toast-progress').style.width = '0%';
+    $('toast-pct').textContent = '0%';
+    $('toast-count').textContent = '';
+    $('toast').classList.add('show');
+  }
+  function updateToastProgress(i, total, sub){
+    $('toast-sub').textContent = sub;
+    var pct = Math.round(((i+1)/total)*100);
+    $('toast-progress').style.width = pct + '%';
+    $('toast-pct').textContent = pct + '%';
+    $('toast-count').textContent = (i+1) + ' / ' + total + ' 완료';
+  }
+  function hideToast(){ $('toast').classList.remove('show'); }
+  var errorToastTimer = null;
+  function showErrorToast(title, message){
+    var toast = $('toast');
+    toast.classList.add('toast-error');
+    $('toast-title').textContent = title;
+    $('toast-sub').textContent = message;
+    $('toast-progress').style.width = '100%';
+    $('toast-pct').textContent = '';
+    $('toast-count').textContent = '';
+    toast.classList.add('show');
+    if (errorToastTimer) clearTimeout(errorToastTimer);
+    errorToastTimer = setTimeout(function(){ toast.classList.remove('show'); toast.classList.remove('toast-error'); }, 6000);
+  }
+
+  /* ============ drawer ============ */
+  function renderDrawerStrip(){
+    $('drawer-count').textContent = results.length + '장';
+    var strip = $('drawer-strip');
+    if (!results.length){
+      strip.innerHTML = '';
+      strip.parentElement.querySelector('.drawer-empty') || (function(){
+        var d = document.createElement('div');
+        d.className = 'drawer-empty';
+        d.textContent = '캡처된 이미지가 없습니다 · 프레임 캡처 버튼을 눌러보세요';
+        strip.after(d);
+      })();
+      return;
+    }
+    var existingEmpty = document.querySelector('.drawer-empty');
+    if (existingEmpty) existingEmpty.remove();
+    strip.innerHTML = results.slice(0, 24).map(function(r){
+      return '<div class="result-thumb"><img src="' + r.url + '" alt=""><span class="dim">' + r.width + '×' + r.height + '</span></div>';
+    }).join('');
+  }
+  $('drawer-head').addEventListener('click', function(e){
+    if (e.target.closest('button')) return;
+    var strip = $('drawer-strip');
+    var chevron = $('drawer-chevron');
+    var collapsed = strip.style.display === 'none';
+    strip.style.display = collapsed ? 'flex' : 'none';
+    chevron.style.transform = collapsed ? '' : 'rotate(180deg)';
+  });
+  $('drawer-zip-btn').addEventListener('click', function(){ downloadZip(results, 'frame-capture-results.zip'); });
+
+  /* ============ results screen ============ */
+  function renderFilterRow(){
+    var counts = {};
+    results.forEach(function(r){ counts[r.sourceName] = (counts[r.sourceName]||0) + 1; });
+    var names = Object.keys(counts);
+    var row = $('filter-row');
+    if (resultFilter !== 'all' && names.indexOf(resultFilter) === -1) resultFilter = 'all';
+    var chips = ['<button type="button" class="filter-chip' + (resultFilter==='all'?' active':'') + '" data-filter="all">전체 ' + results.length + '</button>']
+      .concat(names.map(function(n){
+        return '<button type="button" class="filter-chip' + (resultFilter===n?' active':'') + '" data-filter="' + escapeHtml(n) + '">' + escapeHtml(n) + ' ' + counts[n] + '</button>';
+      }));
+    row.innerHTML = chips.join('');
+    row.querySelectorAll('[data-filter]').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        resultFilter = btn.getAttribute('data-filter');
+        renderFilterRow(); renderResultsGrid();
+      });
+    });
+  }
+
+  function renderResultsGrid(){
+    $('results-sub').textContent = '총 ' + results.length + '장' + (videos.length ? ' · 영상 ' + videos.length + '개에서 캡처됨' : '');
+    $('download-all-label').textContent = '전체 ZIP 다운로드' + (results.length ? ' (' + results.length + '장)' : '');
+    var selectedCount = results.filter(function(r){ return r.selected; }).length;
+    $('download-selected-btn').disabled = selectedCount === 0;
+    $('download-selected-btn').textContent = selectedCount ? '선택 항목 다운로드 (' + selectedCount + ')' : '선택 항목 다운로드';
+    $('download-all-btn').disabled = results.length === 0;
+
+    var grid = $('results-grid');
+    var visible = results.filter(function(r){ return resultFilter === 'all' || r.sourceName === resultFilter; });
+    if (!visible.length){
+      grid.innerHTML = '<div class="results-empty" style="grid-column:1/-1;">' +
+        '<svg viewBox="0 0 24 24" fill="none" width="32" height="32"><path d="M4 7a2 2 0 0 1 2-2h1.2l1-1.5h7.6l1 1.5H18a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><circle cx="12" cy="12.5" r="3" stroke="currentColor" stroke-width="1.6"/></svg>' +
+        '<div>아직 캡처된 이미지가 없습니다</div>' +
+        '<div style="font-size:12px;">작업 화면에서 원하는 프레임을 캡처해보세요</div>' +
+      '</div>';
+      return;
+    }
+    grid.classList.toggle('rename-mode', filenameEditMode);
+    grid.innerHTML = visible.map(function(r){
+      return '' +
+        '<div class="result-card">' +
+          '<div class="result-card-media" data-toggle-id="' + r.id + '" style="aspect-ratio:' + r.width + '/' + r.height + '">' +
+            '<img src="' + r.url + '" alt="">' +
+            '<span class="result-select' + (r.selected ? ' checked' : '') + '">' + (r.selected ? '<svg viewBox="0 0 24 24" fill="none"><path d="m5 13 4 4L19 7" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>' : '') + '</span>' +
+            '<span class="result-dim-badge tabular">' + r.width + '×' + r.height + '</span>' +
+            '<button class="result-dl" title="다운로드" data-dl-id="' + r.id + '"><svg viewBox="0 0 24 24" fill="none"><path d="M12 15V4M12 15l-3.5-3.5M12 15l3.5-3.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button>' +
+          '</div>' +
+          '<div class="result-card-info">' +
+            '<div class="result-time tabular">' + r.timeLabel + ' 지점</div>' +
+            '<div class="result-filename-row">' +
+              '<input type="text" value="' + escapeHtml(r.baseName) + '" data-rename-id="' + r.id + '" title="클릭해서 파일명 수정" spellcheck="false">' +
+              '<span class="ext tabular">.' + r.ext + '</span>' +
+            '</div>' +
+          '</div>' +
+        '</div>';
+    }).join('');
+    grid.querySelectorAll('[data-rename-id]').forEach(function(input){
+      input.addEventListener('input', function(){
+        var r = results.find(function(rr){ return rr.id === input.getAttribute('data-rename-id'); });
+        if (r) r.baseName = input.value;
+      });
+      input.addEventListener('blur', function(){
+        var r = results.find(function(rr){ return rr.id === input.getAttribute('data-rename-id'); });
+        if (!r) return;
+        r.baseName = sanitizeFilename(input.value.trim()) || 'capture';
+        input.value = r.baseName;
+      });
+      input.addEventListener('click', function(e){ e.stopPropagation(); });
+    });
+    grid.querySelectorAll('[data-toggle-id]').forEach(function(el){
+      el.addEventListener('click', function(e){
+        if (e.target.closest('[data-dl-id]')) return;
+        var r = results.find(function(rr){ return rr.id === el.getAttribute('data-toggle-id'); });
+        r.selected = !r.selected;
+        renderResultsGrid();
+      });
+    });
+    grid.querySelectorAll('[data-dl-id]').forEach(function(el){
+      el.addEventListener('click', function(e){
+        e.stopPropagation();
+        var r = results.find(function(rr){ return rr.id === el.getAttribute('data-dl-id'); });
+        triggerBlobDownload(r.blob, resultFilename(r));
+      });
+    });
+  }
+
+  function uniqueZipNames(items){
+    var seen = {};
+    return items.map(function(r){
+      var name = resultFilename(r);
+      if (!seen[name]){ seen[name] = 1; return { name: name, blob: r.blob }; }
+      var dot = name.lastIndexOf('.');
+      var base = dot === -1 ? name : name.slice(0, dot);
+      var ext = dot === -1 ? '' : name.slice(dot);
+      var n = seen[name]++;
+      return { name: base + ' (' + n + ')' + ext, blob: r.blob };
+    });
+  }
+  async function downloadZip(items, name){
+    if (!items.length) return;
+    showToast('ZIP 압축 중…', items.length + '장');
+    try{
+      var blob = await buildZip(uniqueZipNames(items), function(i, total){
+        updateToastProgress(i, total, items.length + '장 압축 중');
+      });
+      hideToast();
+      triggerBlobDownload(blob, name);
+    }catch(err){
+      hideToast();
+      showErrorToast('ZIP 생성 실패', (err && err.message) || 'ZIP 파일을 만들지 못했습니다. 다시 시도해주세요.');
+    }
+  }
+  $('download-all-btn').addEventListener('click', function(){ downloadZip(results, 'frame-capture-results.zip'); });
+  $('download-selected-btn').addEventListener('click', function(){
+    var sel = results.filter(function(r){ return r.selected; });
+    if (!sel.length) return;
+    if (sel.length === 1){ triggerBlobDownload(sel[0].blob, resultFilename(sel[0])); return; }
+    downloadZip(sel, 'frame-capture-selected.zip');
+  });
+  $('rename-mode-btn').addEventListener('click', function(){
+    filenameEditMode = !filenameEditMode;
+    $('rename-mode-btn').classList.toggle('active', filenameEditMode);
+    renderResultsGrid();
+  });
+
+  /* ============ init ============ */
+  renderVideoList();
+  renderPresetList();
+  renderDrawerStrip();
+  renderResultsGrid();
+  renderFilterRow();
+  updateNavEnabled();
+  updateDropzoneText();
+})();
+</script>
+</body>
+</html>
