@@ -179,7 +179,7 @@
   .file-list-empty{ padding:24px 14px; color:var(--text-faint); font-size:12.5px; text-align:center; }
 
   /* ---------- center workspace: shared stage chrome ---------- */
-  .panel-stage{ display:flex; flex-direction:column; min-width:0; min-height:0; background:var(--bg); }
+  .panel-stage{ display:flex; flex-direction:column; min-width:0; min-height:0; background:var(--bg); overflow-y:auto; }
   .stage-mode-label{
     flex:0 0 auto; display:flex; align-items:center; gap:6px; padding:12px 22px 0;
     font-size:11.5px; font-weight:700; color:var(--text-secondary); text-transform:uppercase; letter-spacing:.05em;
@@ -213,6 +213,66 @@
   .transport-controls{ display:flex; align-items:center; justify-content:space-between; gap:14px; }
   .transport-left{ display:flex; align-items:center; gap:4px; }
   .transport-left .btn{ height:32px; }
+
+  /* ---------- capture-time rule state (badges shown above the scrubber) ---------- */
+  .time-state-row{ display:flex; align-items:center; min-height:22px; margin-bottom:6px; }
+  .time-state-badge{
+    display:inline-flex; align-items:center; gap:5px; font-size:11.5px; font-weight:700;
+    padding:3px 9px; border-radius:99px;
+  }
+  .time-state-badge svg{ width:12px;height:12px; }
+  .time-state-badge.auto{ background:var(--accent-tint); color:var(--accent-strong); }
+  .time-state-badge.unspecified{ background:var(--warning-tint); color:var(--warning); }
+
+  .rule-picker{
+    display:flex; align-items:center; gap:8px; flex-wrap:wrap;
+    background:var(--warning-tint); border:1px solid #EAD2A0; border-radius:9px;
+    padding:8px 10px; font-size:12px; color:#8A5A0A;
+  }
+  :root[data-theme="dark"] .rule-picker{ border-color:#5A431E; color:var(--warning); }
+  .rule-picker-chips{ display:flex; gap:6px; flex-wrap:wrap; }
+  .rule-picker-chip{
+    border:1px solid var(--accent-tint-strong); background:var(--surface); color:var(--accent-strong);
+    font-size:11.5px; font-weight:700; padding:4px 10px; border-radius:99px; cursor:pointer; font-family:var(--font-mono);
+  }
+  .rule-picker-chip:hover{ background:var(--accent-tint); }
+
+  /* ---------- capture-time rule panel (collapsible, dark card) ---------- */
+  .rule-panel{ flex:0 0 auto; margin:0 22px 16px; border:1px solid var(--border); border-radius:var(--radius-md); background:var(--surface); overflow:hidden; }
+  .rule-panel-head{
+    width:100%; display:flex; align-items:center; gap:8px; padding:11px 14px;
+    border:none; background:transparent; cursor:pointer; text-align:left;
+  }
+  .rule-panel-head:hover{ background:var(--surface-sunken); }
+  .rule-panel-head .chevron{ color:var(--text-faint); display:flex; flex:0 0 auto; transition:transform .15s ease; }
+  .rule-panel-head .chevron svg{ width:14px;height:14px; }
+  .rule-panel-head.open .chevron{ transform:rotate(180deg); }
+  .rule-panel-title{ font-size:12.5px; font-weight:700; }
+  .rule-panel-count{ font-size:11px; color:var(--text-faint); font-family:var(--font-mono); }
+  .rule-panel-hint{ margin-left:auto; font-size:11.5px; color:var(--text-faint); }
+  .rule-panel-body{ padding:0 14px 14px; }
+  .rule-card-dark{ background:#12151A; border-radius:9px; padding:4px; margin-bottom:10px; max-height:220px; overflow-y:auto; }
+  .rule-row{ display:flex; align-items:center; gap:10px; padding:8px 8px; border-bottom:1px solid rgba(255,255,255,.08); }
+  .rule-row:last-child{ border-bottom:none; }
+  .rule-keyword{ flex:1; min-width:0; font-size:12.5px; font-weight:600; color:rgba(255,255,255,.92); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .rule-time-badge{ font-size:11.5px; font-weight:700; color:#8FB2E8; background:rgba(255,255,255,.09); padding:3px 9px; border-radius:6px; flex:0 0 auto; }
+  .rule-row-actions{ display:flex; gap:2px; flex:0 0 auto; }
+  .icon-btn-dark{ width:24px;height:24px; border-radius:6px; border:none; background:transparent; color:rgba(255,255,255,.45); display:flex; align-items:center; justify-content:center; cursor:pointer; }
+  .icon-btn-dark:hover{ background:rgba(255,255,255,.1); color:rgba(255,255,255,.85); }
+  .icon-btn-dark.danger:hover{ background:rgba(220,90,70,.25); color:#F0A090; }
+  .icon-btn-dark svg{ width:12.5px;height:12.5px; }
+  .rule-edit-fields{ display:flex; gap:6px; flex:1; align-items:center; }
+  .rule-edit-fields input{
+    height:28px; border-radius:6px; border:1px solid rgba(255,255,255,.18); background:rgba(255,255,255,.06);
+    color:#fff; padding:0 8px; font-size:12px; font-family:inherit;
+  }
+  .rule-edit-fields input.mono{ font-family:var(--font-mono); width:70px; text-align:center; }
+  .rule-edit-fields input::placeholder{ color:rgba(255,255,255,.35); }
+  .rule-add-form{ display:flex; gap:8px; align-items:center; }
+  .rule-add-form .input{ height:32px; font-size:12.5px; }
+  .rule-add-form .input.mono{ width:84px; text-align:center; }
+  .rule-add-hint{ font-size:11px; color:var(--danger); margin-top:6px; min-height:14px; }
+  .manage-empty-dark{ padding:16px 12px; color:rgba(255,255,255,.4); font-size:12.5px; text-align:center; }
 
   /* image crop mode */
   .crop-frame{
@@ -409,7 +469,7 @@
   .row-select.checked{ background:var(--accent); border-color:var(--accent); color:#fff; }
   .row-select svg{ width:11px;height:11px; }
   .row-filename-cell{ min-width:220px; }
-  .row-filename-row{ display:flex; align-items:center; gap:0; border:1px solid transparent; border-radius:6px; position:relative; }
+  .row-filename-row{ display:flex; align-items:center; gap:0; border:1px solid transparent; border-radius:6px; }
   .row-filename-row.dup{ background:var(--danger-tint-soft); border-color:transparent; }
   .row-filename-row input{
     flex:1; min-width:0; border:none; background:transparent; color:var(--text);
@@ -417,11 +477,8 @@
   }
   .row-filename-row input:hover{ background:var(--surface-sunken); }
   .row-filename-row.dup input:hover{ background:rgba(0,0,0,.04); }
-  .row-filename-row:focus-within{
-    position:absolute; left:0; top:0; z-index:6; width:max(100%,300px); max-width:calc(100vw - 40px);
-    background:var(--surface); border-color:var(--accent); box-shadow:var(--shadow-md); padding:1px;
-  }
-  .row-filename-row input:focus-visible{ outline:none; }
+  .row-filename-row:focus-within{ border-color:var(--accent); background:var(--surface); }
+  .row-filename-row input:focus-visible{ outline:none; background:var(--surface); }
   .dup-flag{ display:inline-flex; align-items:center; gap:3px; font-size:10.5px; font-weight:700; color:var(--danger); margin-left:6px; flex:0 0 auto; }
   .dup-flag svg{ width:11px;height:11px; }
   .row-dim{ font-family:var(--font-mono); font-size:12.5px; color:var(--text-secondary); white-space:nowrap; }
@@ -459,6 +516,7 @@
 </style>
 </head>
 <body>
+
 <div class="app">
   <div class="topbar">
     <div class="brand">
@@ -532,6 +590,17 @@
           </div>
         </div>
         <div class="transport">
+          <div class="time-state-row" id="time-state-row" style="display:none;">
+            <span class="time-state-badge auto" id="time-state-badge">
+              <svg viewBox="0 0 24 24" fill="none"><path d="M12 3v3m0 12v3m9-9h-3M6 12H3m14.5-6.5-2 2m-9 9-2 2m0-13 2 2m9 9 2 2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+              <span id="time-state-badge-text"></span>
+            </span>
+            <div class="rule-picker" id="rule-picker" style="display:none;">
+              <svg viewBox="0 0 24 24" width="15" height="15" fill="none" style="flex:0 0 auto;"><path d="M12 9v4m0 4h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
+              <span>여러 규칙이 일치해요 — 적용할 시각을 선택하세요</span>
+              <span class="rule-picker-chips" id="rule-picker-chips"></span>
+            </div>
+          </div>
           <div class="scrub-row">
             <span class="time-label tabular" id="time-current">00:00</span>
             <div class="scrubber" id="scrubber">
@@ -557,6 +626,27 @@
               <svg viewBox="0 0 24 24" fill="none"><path d="M4 7a2 2 0 0 1 2-2h1.2l1-1.5h7.6l1 1.5H18a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><circle cx="12" cy="12.5" r="3.1" stroke="currentColor" stroke-width="1.8"/></svg>
               이 프레임 캡처
             </button>
+          </div>
+        </div>
+
+        <div class="rule-panel" id="rule-panel">
+          <button type="button" class="rule-panel-head" id="rule-panel-toggle">
+            <span class="chevron" id="rule-chevron"><svg viewBox="0 0 24 24" fill="none"><path d="m6 9 6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+            <span class="rule-panel-title">캡처 시각 규칙</span>
+            <span class="rule-panel-count" id="rule-panel-count">0개</span>
+            <span class="rule-panel-hint">파일명에 키워드가 있으면 캡처 시각을 자동으로 채워요</span>
+          </button>
+          <div class="rule-panel-body" id="rule-panel-body" style="display:none;">
+            <div class="rule-card-dark" id="rule-list"></div>
+            <div class="rule-add-form">
+              <input class="input" type="text" placeholder="키워드 (예: QR-개념 영상)" id="rule-new-keyword">
+              <input class="input mono" type="text" placeholder="00:04" id="rule-new-time">
+              <button class="btn btn-primary btn-sm" type="button" id="rule-add-btn">
+                <svg viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+                추가
+              </button>
+            </div>
+            <div class="rule-add-hint" id="rule-add-hint"></div>
           </div>
         </div>
       </div>
@@ -955,7 +1045,7 @@
   var currentFormat = 'png';
 
   function defaultPresets(){
-    return [ { id: uid(), width: 1080, height: 1080, checked: true } ];
+    return [ { id: uid(), width: 1920, height: 1080, checked: true } ];
   }
   function loadPresets(){
     try{
@@ -977,6 +1067,46 @@
     }catch(e){}
   }
   presets = loadPresets();
+
+  var rules = [];          // {id, keyword, time}
+  var editingRuleId = null;
+
+  function defaultRules(){
+    return [
+      { id: uid(), keyword: '교크협-개념 영상', time: '00:04' },
+      { id: uid(), keyword: '교크협-개념+ 영상', time: '00:05' },
+      { id: uid(), keyword: '교크협-수익 영상', time: '00:04' },
+      { id: uid(), keyword: '단원 정리 영상', time: '00:02' },
+      { id: uid(), keyword: '도입 영상', time: '00:03' },
+      { id: uid(), keyword: '이종대왕-흥미진진 활동+ 영상', time: '00:05' },
+      { id: uid(), keyword: '진격의 홀쌤-수학이 좋아 영상', time: '00:04' },
+      { id: uid(), keyword: '창의 융합 활동 영상', time: '00:05' },
+      { id: uid(), keyword: '탐험 애니메이션(QR-활동 영상)', time: '00:10' },
+      { id: uid(), keyword: 'QR-개념 영상', time: '00:04' },
+      { id: uid(), keyword: 'QR-마무리 영상', time: '00:03' },
+      { id: uid(), keyword: 'QR-활동 영상', time: '00:04' }
+    ];
+  }
+  function loadRules(){
+    try{
+      var raw = localStorage.getItem('thumbgen-rules-v1');
+      if (raw){
+        var arr = JSON.parse(raw);
+        if (Array.isArray(arr) && arr.length){
+          return arr.map(function(r){ return { id: uid(), keyword: r.keyword, time: r.time }; });
+        }
+      }
+    }catch(e){}
+    return defaultRules();
+  }
+  function saveRules(){
+    try{
+      localStorage.setItem('thumbgen-rules-v1', JSON.stringify(rules.map(function(r){
+        return { keyword: r.keyword, time: r.time };
+      })));
+    }catch(e){}
+  }
+  rules = loadRules();
 
   var $ = function(id){ return document.getElementById(id); };
   var mainVideo = $('main-video');
@@ -1209,6 +1339,7 @@
     if (v.kind === 'video'){
       $('stage-video').style.display = 'flex';
       $('stage-image').style.display = 'none';
+      $('time-state-row').style.display = 'none';
       mainVideo.pause();
       mainVideo.src = v.url;
       renderCaptureMarks();
@@ -1228,6 +1359,7 @@
     $('time-total').textContent = formatTime(mainVideo.duration);
     $('frame-timecode').style.display = '';
     updateScrubberUI();
+    evaluateTimeStateForCurrentVideo();
   });
   mainVideo.addEventListener('timeupdate', updateScrubberUI);
   mainVideo.addEventListener('play', function(){ $('center-play').style.display = 'none'; updatePlayIcon(false); });
@@ -1261,6 +1393,7 @@
     if (!currentFileId || !mainVideo.duration) return;
     mainVideo.pause();
     mainVideo.currentTime = clamp(mainVideo.currentTime + dir*(1/30), 0, mainVideo.duration);
+    dismissTimeStateBadge();
   }
   var scrubDragging = false;
   function ratioFromEvent(e){
@@ -1271,6 +1404,7 @@
   scrubberEl.addEventListener('pointerdown', function(e){
     if (!currentFileId) return;
     scrubDragging = true; scrubberEl.setPointerCapture(e.pointerId); seekTo(ratioFromEvent(e));
+    dismissTimeStateBadge();
   });
   scrubberEl.addEventListener('pointermove', function(e){ if (scrubDragging) seekTo(ratioFromEvent(e)); });
   scrubberEl.addEventListener('pointerup', function(){ scrubDragging = false; });
@@ -1284,6 +1418,134 @@
       return '<span class="mark" style="left:' + (ratio*100) + '%"></span>';
     }).join('');
   }
+
+  /* ============ capture-time rules: matching + UI ============ */
+  function timeToSeconds(str){
+    var parts = String(str).split(':').map(function(n){ return parseInt(n, 10) || 0; });
+    if (parts.length === 2) return parts[0] * 60 + parts[1];
+    return parts[0] || 0;
+  }
+  function isValidTimeFormat(str){ return /^\d{1,2}:\d{2}$/.test(String(str).trim()); }
+  function matchRules(filename){
+    return rules.filter(function(r){ return r.keyword && filename.indexOf(r.keyword) !== -1; });
+  }
+  function dismissTimeStateBadge(){
+    $('time-state-row').style.display = 'none';
+  }
+  function evaluateTimeStateForCurrentVideo(){
+    var v = getFile(currentFileId);
+    if (!v || v.kind !== 'video' || !mainVideo.duration) return;
+    var matches = matchRules(v.name);
+    var row = $('time-state-row');
+    var badge = $('time-state-badge');
+    var picker = $('rule-picker');
+    row.style.display = '';
+
+    if (matches.length === 1){
+      picker.style.display = 'none';
+      badge.style.display = '';
+      badge.className = 'time-state-badge auto';
+      $('time-state-badge-text').textContent = '자동 적용됨 · "' + matches[0].keyword + '" 규칙';
+      mainVideo.currentTime = clamp(timeToSeconds(matches[0].time), 0, mainVideo.duration);
+    } else if (matches.length >= 2){
+      badge.style.display = 'none';
+      picker.style.display = '';
+      $('rule-picker-chips').innerHTML = matches.map(function(r){
+        return '<button type="button" class="rule-picker-chip" data-apply-rule="' + r.id + '">' + escapeHtml(r.keyword) + ' · ' + escapeHtml(r.time) + '</button>';
+      }).join('');
+      $('rule-picker-chips').querySelectorAll('[data-apply-rule]').forEach(function(chip){
+        chip.addEventListener('click', function(){
+          var r = rules.find(function(rr){ return rr.id === chip.getAttribute('data-apply-rule'); });
+          if (!r) return;
+          mainVideo.currentTime = clamp(timeToSeconds(r.time), 0, mainVideo.duration);
+          picker.style.display = 'none';
+          badge.style.display = '';
+          badge.className = 'time-state-badge auto';
+          $('time-state-badge-text').textContent = '자동 적용됨 · "' + r.keyword + '" 규칙';
+        });
+      });
+    } else {
+      picker.style.display = 'none';
+      badge.style.display = '';
+      badge.className = 'time-state-badge unspecified';
+      $('time-state-badge-text').textContent = '시각 미지정 · 스크러버로 직접 지정해주세요';
+    }
+  }
+
+  function renderRuleList(){
+    $('rule-panel-count').textContent = rules.length + '개';
+    var list = $('rule-list');
+    if (!rules.length){
+      list.innerHTML = '<div class="manage-empty-dark">등록된 규칙이 없습니다. 아래에서 추가해보세요.</div>';
+      return;
+    }
+    list.innerHTML = rules.map(function(r){
+      if (r.id === editingRuleId){
+        return '' +
+          '<div class="rule-row" data-rule-row="' + r.id + '">' +
+            '<div class="rule-edit-fields">' +
+              '<input type="text" value="' + escapeHtml(r.keyword) + '" data-edit="keyword" placeholder="키워드">' +
+              '<input type="text" class="mono" value="' + escapeHtml(r.time) + '" data-edit="time" placeholder="00:00">' +
+            '</div>' +
+            '<span class="rule-row-actions">' +
+              '<button class="icon-btn-dark" data-action="save" title="저장"><svg viewBox="0 0 24 24" fill="none"><path d="m5 13 4 4L19 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>' +
+              '<button class="icon-btn-dark" data-action="cancel" title="취소"><svg viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button>' +
+            '</span>' +
+          '</div>';
+      }
+      return '' +
+        '<div class="rule-row" data-rule-row="' + r.id + '">' +
+          '<span class="rule-keyword">' + escapeHtml(r.keyword) + '</span>' +
+          '<span class="rule-time-badge tabular">' + escapeHtml(r.time) + '</span>' +
+          '<span class="rule-row-actions">' +
+            '<button class="icon-btn-dark" data-action="edit" title="수정"><svg viewBox="0 0 24 24" fill="none"><path d="m16.5 4.5 3 3L8 19H5v-3L16.5 4.5Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg></button>' +
+            '<button class="icon-btn-dark danger" data-action="delete" title="삭제"><svg viewBox="0 0 24 24" fill="none"><path d="M5 7h14M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2m2 0-.8 12.1A2 2 0 0 1 14.2 21H9.8a2 2 0 0 1-2-1.9L7 7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>' +
+          '</span>' +
+        '</div>';
+    }).join('');
+
+    list.querySelectorAll('[data-rule-row]').forEach(function(row){
+      var id = row.getAttribute('data-rule-row');
+      var editBtn = row.querySelector('[data-action="edit"]');
+      var delBtn = row.querySelector('[data-action="delete"]');
+      var saveBtn = row.querySelector('[data-action="save"]');
+      var cancelBtn = row.querySelector('[data-action="cancel"]');
+      if (editBtn) editBtn.addEventListener('click', function(){ editingRuleId = id; renderRuleList(); });
+      if (cancelBtn) cancelBtn.addEventListener('click', function(){ editingRuleId = null; renderRuleList(); });
+      if (delBtn) delBtn.addEventListener('click', function(){
+        rules = rules.filter(function(r){ return r.id !== id; });
+        saveRules(); renderRuleList(); evaluateTimeStateForCurrentVideo();
+      });
+      if (saveBtn) saveBtn.addEventListener('click', function(){
+        var r = rules.find(function(rr){ return rr.id === id; });
+        var kw = row.querySelector('[data-edit="keyword"]').value.trim();
+        var tm = row.querySelector('[data-edit="time"]').value.trim();
+        if (!kw || !isValidTimeFormat(tm)) return;
+        r.keyword = kw; r.time = tm;
+        editingRuleId = null;
+        saveRules(); renderRuleList(); evaluateTimeStateForCurrentVideo();
+      });
+    });
+  }
+  $('rule-panel-toggle').addEventListener('click', function(){
+    var body = $('rule-panel-body');
+    var head = $('rule-panel-toggle');
+    var open = body.style.display === 'none';
+    body.style.display = open ? 'block' : 'none';
+    head.classList.toggle('open', open);
+  });
+  $('rule-add-btn').addEventListener('click', function(){
+    var kwEl = $('rule-new-keyword'), tmEl = $('rule-new-time'), hint = $('rule-add-hint');
+    var kw = kwEl.value.trim(), tm = tmEl.value.trim();
+    if (!kw || !isValidTimeFormat(tm)){
+      hint.textContent = '키워드와 mm:ss 형식의 시각(예: 00:20)을 모두 입력해주세요.';
+      return;
+    }
+    hint.textContent = '';
+    rules.push({ id: uid(), keyword: kw, time: tm });
+    kwEl.value = ''; tmEl.value = '';
+    saveRules(); renderRuleList(); evaluateTimeStateForCurrentVideo();
+  });
 
   /* ============ image crop stage ============ */
   var cropBox = { x: 0, y: 0, w: 0, h: 0 };
@@ -2001,6 +2263,7 @@
   /* ============ init ============ */
   renderFileList();
   renderPresetList();
+  renderRuleList();
   renderDrawerStrip();
   renderResultsList();
   renderResultsGrid();
