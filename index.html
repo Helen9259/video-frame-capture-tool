@@ -79,12 +79,15 @@
     gap:16px; padding:0 20px; height:56px;
     background:var(--surface); border-bottom:1px solid var(--border);
   }
-  .brand{ display:flex; align-items:center; gap:10px; font-weight:700; font-size:15px; letter-spacing:-0.01em; }
+  .brand-group{ display:flex; align-items:center; gap:14px; min-width:0; }
+  .brand{ display:flex; align-items:center; gap:10px; font-weight:700; font-size:15px; letter-spacing:-0.01em; flex:0 0 auto; }
   .brand-mark{
     width:26px;height:26px; border-radius:7px; background:var(--accent);
     display:flex;align-items:center;justify-content:center; flex:0 0 auto;
   }
   .brand-mark svg{ width:15px;height:15px; }
+  #reset-all-btn{ color:var(--text-secondary); }
+  #reset-all-btn svg{ width:13px;height:13px; }
 
   .nav-switch{ display:flex; gap:2px; background:var(--surface-sunken); border:1px solid var(--border); border-radius:8px; padding:2px; }
   .nav-switch button{
@@ -549,9 +552,15 @@
 
 <div class="app">
   <div class="topbar">
-    <div class="brand">
-      <span class="brand-mark"><svg viewBox="0 0 24 24" fill="none" class="icon-white"><path d="M4 7a2 2 0 0 1 2-2h7l2 2h5a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><circle cx="13" cy="14" r="3.2" stroke="currentColor" stroke-width="1.8"/></svg></span>
-      썸네일 생성기
+    <div class="brand-group">
+      <div class="brand">
+        <span class="brand-mark"><svg viewBox="0 0 24 24" fill="none" class="icon-white"><path d="M4 7a2 2 0 0 1 2-2h7l2 2h5a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><circle cx="13" cy="14" r="3.2" stroke="currentColor" stroke-width="1.8"/></svg></span>
+        썸네일 생성기
+      </div>
+      <button type="button" class="btn btn-sm btn-ghost" id="reset-all-btn" title="작업 중인 파일과 결과물을 모두 지우고 처음부터 시작합니다">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M20 12a8 8 0 1 1-2.34-5.66" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M20 4v5h-5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        초기화
+      </button>
     </div>
     <div class="nav-switch" role="tablist" aria-label="화면 전환">
       <button type="button" class="active" data-screen="empty">업로드</button>
@@ -1169,6 +1178,7 @@
     $('nav-workspace').disabled = files.length === 0;
     $('nav-results').disabled = results.length === 0;
     $('drawer-next-btn').disabled = results.length === 0;
+    $('reset-all-btn').disabled = files.length === 0 && results.length === 0;
   }
 
   /* ============ file intake ============ */
@@ -1430,6 +1440,38 @@
     updateNavEnabled();
     if (!files.length) showScreen('empty');
   }
+
+  function resetAll(){
+    files.forEach(function(v){ URL.revokeObjectURL(v.url); });
+    results.forEach(function(r){ URL.revokeObjectURL(r.url); });
+    files = [];
+    results = [];
+    thumbQueue = [];
+    thumbBusy = false;
+    currentFileId = null;
+    manualOverrideFileId = null;
+    mainVideo.pause();
+    mainVideo.removeAttribute('src');
+    mainVideo.load();
+    $('stage-video').style.display = 'none';
+    $('stage-image').style.display = 'none';
+    $('time-state-row').style.display = 'none';
+    $('stage-empty-state').style.display = '';
+    renderFileList();
+    updateDropzoneText();
+    renderDrawerStrip();
+    renderResultsList();
+    renderResultsGrid();
+    renderClassifyTags();
+    updateNavEnabled();
+    showScreen('empty');
+  }
+  $('reset-all-btn').addEventListener('click', function(){
+    if (!files.length && !results.length) return;
+    if (window.confirm('작업 중인 파일과 결과물이 모두 사라지고 처음 화면으로 돌아갑니다. 계속할까요?')){
+      resetAll();
+    }
+  });
 
   mainVideo.addEventListener('loadedmetadata', function(){
     updateFrameResBadge();
