@@ -441,6 +441,18 @@
   .rename-table .new-name mark{ background:var(--accent-tint-strong); color:var(--accent-strong); border-radius:3px; padding:0 1px; font-weight:700; }
   .rename-table .arrow-cell{ color:var(--text-faint); width:20px; }
 
+  /* ---------- bulk image resize modal ---------- */
+  .bulk-image-list{ max-height:180px; overflow-y:auto; }
+  .bulk-image-row{ display:flex; align-items:center; gap:10px; padding:8px 10px; }
+  .bulk-image-row .file-name{ font-size:12.5px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .bulk-preset-choices{ display:flex; flex-direction:column; gap:8px; max-height:220px; overflow-y:auto; }
+  .preset-card.bulk-radio .checkbox{ border-radius:50%; }
+  .radio-fill{ width:7px;height:7px;border-radius:50%;background:#fff; }
+  .bulk-warn-note{ display:flex; gap:8px; align-items:flex-start; background:var(--warning-tint); border:1px solid #EAD2A0; border-radius:9px; padding:10px 12px; font-size:12px; color:#8A5A0A; line-height:1.5; }
+  .bulk-warn-note svg{ width:15px;height:15px; flex:0 0 auto; margin-top:1px; color:var(--warning); }
+  :root[data-theme="dark"] .bulk-warn-note{ border-color:#5A431E; color:var(--warning); }
+  .work-status-note{ color:var(--text-faint); font-weight:400; font-size:11px; margin-left:4px; }
+
   /* ---------- Results screen ---------- */
   .results-screen{ flex:1; display:flex; flex-direction:column; min-height:0; }
   .results-bar{ flex:0 0 auto; display:flex; align-items:center; justify-content:space-between; gap:16px; padding:16px 24px; background:var(--surface); border-bottom:1px solid var(--border); flex-wrap:wrap; }
@@ -497,9 +509,9 @@
   .row-ext-select button{ border:none; background:transparent; color:var(--text-secondary); font-size:11px; font-weight:700; padding:4px 9px; border-radius:5px; cursor:pointer; }
   .row-ext-select button.active{ background:var(--surface); color:var(--accent-strong); box-shadow:var(--shadow-sm); }
   .row-actions{ display:flex; align-items:center; gap:6px; }
-  .row-dl{ width:30px;height:30px; border-radius:8px; border:1px solid var(--border-strong); background:var(--surface); display:flex; align-items:center; justify-content:center; cursor:pointer; color:var(--text); }
-  .row-dl:hover{ border-color:var(--text-faint); }
-  .row-dl svg{ width:14px;height:14px; }
+  .row-dl, .row-adjust{ width:30px;height:30px; border-radius:8px; border:1px solid var(--border-strong); background:var(--surface); display:flex; align-items:center; justify-content:center; cursor:pointer; color:var(--text); }
+  .row-dl:hover, .row-adjust:hover{ border-color:var(--text-faint); }
+  .row-dl svg, .row-adjust svg{ width:14px;height:14px; }
   .row-del{ width:30px;height:30px; border-radius:8px; border:1px solid var(--border-strong); background:var(--surface); display:flex; align-items:center; justify-content:center; cursor:pointer; color:var(--text-secondary); }
   .row-del:hover{ border-color:var(--danger); color:var(--danger); background:var(--danger-tint-soft); }
   .row-del svg{ width:14px;height:14px; }
@@ -520,6 +532,9 @@
   .result-del{ position:absolute; bottom:8px; right:40px; width:26px;height:26px; border-radius:7px; background:rgba(255,255,255,.92); border:none; display:flex;align-items:center;justify-content:center; color:#20242C; cursor:pointer; z-index:2; }
   .result-del:hover{ background:var(--danger); color:#fff; }
   .result-del svg{ width:14px;height:14px; }
+  .result-adjust{ position:absolute; bottom:8px; right:72px; width:26px;height:26px; border-radius:7px; background:rgba(255,255,255,.92); border:none; display:flex;align-items:center;justify-content:center; color:#20242C; cursor:pointer; z-index:2; }
+  .result-adjust:hover{ background:var(--accent); color:#fff; }
+  .result-adjust svg{ width:14px;height:14px; }
   .result-card-info{ padding:8px 10px 10px; position:relative; }
   .result-card .row-filename-row input{ font-size:11.5px; padding:3px 4px; }
 
@@ -757,6 +772,7 @@
           <div class="drawer-head-left">
             <span class="chevron" id="drawer-chevron"><svg viewBox="0 0 24 24" fill="none"><path d="m6 15 6-6 6 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
             결과물 <span class="drawer-count" id="drawer-count">0개</span>
+            <span class="work-status-note">· 작업 중 · 아직 저장되지 않음</span>
           </div>
           <div class="drawer-actions">
             <button class="btn btn-sm btn-primary" type="button" id="drawer-next-btn" disabled>
@@ -925,6 +941,39 @@
   </div>
 </div>
 
+<!-- MODAL: bulk image resize -->
+<div class="modal-backdrop" id="bulk-image-modal">
+  <div class="modal modal-wide" role="dialog" aria-modal="true">
+    <div class="modal-head">
+      <h2>이미지 일괄 사이즈 변경</h2>
+      <button class="btn btn-icon btn-ghost" type="button" id="close-bulk-image-modal" aria-label="닫기">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div>
+        <span class="field-label">업로드된 이미지 · <span id="bulk-image-count">0</span>개</span>
+        <div class="manage-list bulk-image-list" id="bulk-image-list"></div>
+      </div>
+      <div>
+        <span class="field-label">적용할 사이즈 선택</span>
+        <div class="bulk-preset-choices" id="bulk-preset-choices"></div>
+      </div>
+      <div class="bulk-warn-note">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M12 9v4m0 4h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
+        <span>선택한 사이즈로 강제로 맞춰지며, 원본 비율과 다르면 이미지가 늘어나거나 눌릴 수 있어요. 정확한 비율로 자르고 싶다면 나중에 목록에서 개별로 다시 조정할 수 있어요.</span>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn" type="button" id="skip-bulk-image-btn">나중에 개별로 조정할게요</button>
+      <button class="btn btn-primary" type="button" id="apply-bulk-image-btn">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M4 7a2 2 0 0 1 2-2h1.2l1-1.5h7.6l1 1.5H18a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
+        사이즈 변경
+      </button>
+    </div>
+  </div>
+</div>
+
 <input type="file" id="file-input" class="hidden-input" accept="video/*,image/*" multiple>
 <input type="file" id="folder-input" class="hidden-input" webkitdirectory directory multiple>
 <video id="thumb-gen" class="hidden-input" muted playsinline preload="auto"></video>
@@ -1089,6 +1138,8 @@
   var thumbBusy = false;
   var colorClasses = ['p1','p2','p3'];
   var currentFormat = 'png';
+  var pendingBulkImageIds = [];   // image file ids awaiting the bulk-resize popup
+  var bulkSelectedPresetId = null;
 
   function defaultPresets(){
     return [ { id: uid(), width: 1920, height: 1080, checked: true } ];
@@ -1257,6 +1308,7 @@
 
   function addFiles(newFiles){
     if (!newFiles.length) return;
+    var addedImageIds = [];
     newFiles.forEach(function(f){
       var kind = fileKind(f);
       var v = {
@@ -1268,6 +1320,7 @@
       };
       files.push(v);
       thumbQueue.push(v);
+      if (kind === 'image') addedImageIds.push(v.id);
     });
     processThumbQueue();
     renderFileList();
@@ -1275,6 +1328,7 @@
     updateNavEnabled();
     if (!currentFileId) selectFile(files[0].id);
     showScreen('workspace');
+    if (addedImageIds.length) openBulkImageModal(addedImageIds);
   }
   function updateDropzoneText(){
     if (files.length){
@@ -1349,6 +1403,7 @@
     var container = $('file-list');
     if (!files.length){
       container.innerHTML = '<div class="file-list-empty">아직 업로드된 파일이 없습니다</div>';
+      if ($('bulk-image-modal').classList.contains('open')) renderBulkImageList();
       return;
     }
     container.innerHTML = files.map(function(v){
@@ -1387,6 +1442,7 @@
         deleteFile(btn.getAttribute('data-del-file-id'));
       });
     });
+    if ($('bulk-image-modal').classList.contains('open')) renderBulkImageList();
   }
   function getFile(id){ return files.find(function(v){ return v.id === id; }); }
 
@@ -2074,6 +2130,102 @@
     afterGenerate();
   }
 
+  /* ============ bulk image resize (upload-time popup) ============ */
+  function waitForBitmap(v, timeoutMs){
+    return new Promise(function(resolve){
+      if (v.bitmap || v.status === 'error'){ resolve(); return; }
+      var elapsed = 0;
+      var iv = setInterval(function(){
+        elapsed += 100;
+        if (v.bitmap || v.status === 'error' || elapsed > (timeoutMs || 8000)){ clearInterval(iv); resolve(); }
+      }, 100);
+    });
+  }
+  function openBulkImageModal(ids){
+    pendingBulkImageIds = ids;
+    var checkedPreset = presets.filter(function(p){ return p.checked; })[0];
+    bulkSelectedPresetId = (checkedPreset || presets[0] || {}).id || null;
+    renderBulkImageList();
+    renderBulkPresetChoices();
+    $('bulk-image-modal').classList.add('open');
+  }
+  function closeBulkImageModal(){
+    $('bulk-image-modal').classList.remove('open');
+    pendingBulkImageIds = [];
+  }
+  function renderBulkImageList(){
+    $('bulk-image-count').textContent = pendingBulkImageIds.length;
+    var list = $('bulk-image-list');
+    var items = pendingBulkImageIds.map(getFile).filter(Boolean);
+    if (!items.length){
+      list.innerHTML = '<div class="manage-empty">표시할 이미지가 없습니다</div>';
+      return;
+    }
+    list.innerHTML = items.map(function(v){
+      var thumbStyle = v.thumbDataURL ? ' style="background-image:url(' + v.thumbDataURL + ')"' : '';
+      var inner = v.status === 'loading'
+        ? '<span class="spin"><span class="spinner"></span></span>'
+        : '<span class="type-badge">' + typeIconSvg(v.kind) + '</span>';
+      return '' +
+        '<div class="bulk-image-row">' +
+          '<div class="file-thumb ' + v.colorClass + '"' + thumbStyle + '>' + inner + '</div>' +
+          '<span class="file-name">' + escapeHtml(v.name) + '</span>' +
+        '</div>';
+    }).join('');
+  }
+  function renderBulkPresetChoices(){
+    var container = $('bulk-preset-choices');
+    if (!presets.length){
+      container.innerHTML = '<div class="manage-empty">등록된 사이즈가 없습니다. 사이즈 프리셋을 먼저 추가해주세요.</div>';
+      return;
+    }
+    container.innerHTML = presets.map(function(p){
+      var d = swatchDims(p.width, p.height, 20);
+      var checked = p.id === bulkSelectedPresetId;
+      return '' +
+        '<div class="preset-card bulk-radio' + (checked ? ' checked' : '') + '" data-bulk-preset-id="' + p.id + '">' +
+          '<span class="checkbox">' + (checked ? '<span class="radio-fill"></span>' : '') + '</span>' +
+          '<span class="ratio-swatch"><i style="width:' + d.sw + 'px;height:' + d.sh + 'px;"></i></span>' +
+          '<span class="preset-info"><span class="preset-name tabular">' + p.width + ' × ' + p.height + '</span></span>' +
+        '</div>';
+    }).join('');
+    container.querySelectorAll('[data-bulk-preset-id]').forEach(function(el){
+      el.addEventListener('click', function(){
+        bulkSelectedPresetId = el.getAttribute('data-bulk-preset-id');
+        renderBulkPresetChoices();
+      });
+    });
+  }
+  $('close-bulk-image-modal').addEventListener('click', closeBulkImageModal);
+  $('skip-bulk-image-btn').addEventListener('click', closeBulkImageModal);
+  $('bulk-image-modal').addEventListener('click', function(e){ if (e.target === $('bulk-image-modal')) closeBulkImageModal(); });
+  $('apply-bulk-image-btn').addEventListener('click', async function(){
+    var preset = presets.find(function(p){ return p.id === bulkSelectedPresetId; });
+    var items = pendingBulkImageIds.map(getFile).filter(function(v){ return v && v.kind === 'image'; });
+    if (!preset || !items.length) return;
+    showToast('이미지 사이즈 일괄 변경 중…', items.length + '개');
+    try{
+      for (var i = 0; i < items.length; i++){
+        var v = items[i];
+        updateToastProgress(i, items.length, v.name);
+        if (!v.bitmap) await waitForBitmap(v);
+        if (!v.bitmap) continue;
+        var c = document.createElement('canvas');
+        c.width = preset.width; c.height = preset.height;
+        c.getContext('2d').drawImage(v.bitmap, 0, 0, v.naturalW, v.naturalH, 0, 0, preset.width, preset.height);
+        var blob = await canvasToBlob(c, currentFormat);
+        addResult(blob, preset, v, currentFormat, null);
+        await new Promise(function(r){ requestAnimationFrame(r); });
+      }
+      hideToast();
+    }catch(err){
+      hideToast();
+      showErrorToast('사이즈 변경 실패', (err && err.message) || '알 수 없는 오류가 발생했습니다.');
+    }
+    afterGenerate();
+    closeBulkImageModal();
+  });
+
   /* ============ re-encode (per-row / bulk extension change) ============ */
   async function reencodeResult(r, newFormat){
     var wantExt = newFormat === 'jpeg' ? 'jpg' : 'png';
@@ -2161,7 +2313,7 @@
 
   /* ============ results: list + grid ============ */
   function renderResultsList(){
-    $('results-sub').textContent = '총 ' + results.length + '개' + (files.length ? ' · 영상 ' + files.filter(function(f){return f.kind==='video';}).length + '개 · 이미지 ' + files.filter(function(f){return f.kind==='image';}).length + '개에서 생성됨' : '');
+    $('results-sub').textContent = '총 ' + results.length + '개' + (files.length ? ' · 영상 ' + files.filter(function(f){return f.kind==='video';}).length + '개 · 이미지 ' + files.filter(function(f){return f.kind==='image';}).length + '개에서 생성됨' : '') + ' · 작업 중 · 다운로드해야 저장돼요';
     $('download-all-label').textContent = '전체 ZIP 다운로드' + (results.length ? ' (' + results.length + '개)' : '');
     var selectedCount = results.filter(function(r){ return r.selected; }).length;
     $('download-selected-btn').disabled = selectedCount === 0;
@@ -2189,6 +2341,7 @@
           '<td class="row-dim tabular">' + r.width + '×' + r.height + '</td>' +
           '<td><div class="row-ext-select" data-ext-id="' + r.id + '"><button type="button" class="' + (r.ext==='png'?'active':'') + '" data-format="png">PNG</button><button type="button" class="' + (r.ext==='jpg'?'active':'') + '" data-format="jpeg">JPG</button></div></td>' +
           '<td><div class="row-actions">' +
+            (r.sourceKind === 'image' ? '<button class="row-adjust" title="다시 조정" data-adjust-id="' + r.id + '"><svg viewBox="0 0 24 24" fill="none"><path d="m16.5 4.5 3 3L8 19H5v-3L16.5 4.5Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg></button>' : '') +
             '<button class="row-dl" title="다운로드" data-dl-id="' + r.id + '"><svg viewBox="0 0 24 24" fill="none"><path d="M12 15V4M12 15l-3.5-3.5M12 15l3.5-3.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button>' +
             '<button class="row-del" title="삭제" data-del-id="' + r.id + '"><svg viewBox="0 0 24 24" fill="none"><path d="M5 7h14M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2m2 0-.8 12.1A2 2 0 0 1 14.2 21H9.8a2 2 0 0 1-2-1.9L7 7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>' +
           '</div></td>' +
@@ -2244,6 +2397,19 @@
         deleteResult(btn.getAttribute('data-del-id'));
       });
     });
+    container.querySelectorAll('[data-adjust-id]').forEach(function(btn){
+      btn.addEventListener('click', function(e){
+        e.stopPropagation();
+        var r = results.find(function(rr){ return rr.id === btn.getAttribute('data-adjust-id'); });
+        if (r) adjustResultSource(r);
+      });
+    });
+  }
+  function adjustResultSource(r){
+    var v = getFile(r.sourceId);
+    if (!v){ showErrorToast('원본을 찾을 수 없습니다', '원본 이미지가 삭제되었거나 더 이상 존재하지 않습니다.'); return; }
+    showScreen('workspace');
+    selectFile(v.id);
   }
 
   function renderResultsGrid(){
@@ -2264,6 +2430,7 @@
             '<img src="' + r.url + '" alt="">' +
             '<span class="result-select' + (r.selected ? ' checked' : '') + '">' + (r.selected ? '<svg viewBox="0 0 24 24" fill="none"><path d="m5 13 4 4L19 7" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>' : '') + '</span>' +
             '<span class="result-dim-badge tabular">' + r.width + '×' + r.height + '</span>' +
+            (r.sourceKind === 'image' ? '<button class="result-adjust" title="다시 조정" data-adjust-id="' + r.id + '"><svg viewBox="0 0 24 24" fill="none"><path d="m16.5 4.5 3 3L8 19H5v-3L16.5 4.5Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg></button>' : '') +
             '<button class="result-dl" title="다운로드" data-dl-id="' + r.id + '"><svg viewBox="0 0 24 24" fill="none"><path d="M12 15V4M12 15l-3.5-3.5M12 15l3.5-3.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button>' +
             '<button class="result-del" title="삭제" data-del-id="' + r.id + '"><svg viewBox="0 0 24 24" fill="none"><path d="M5 7h14M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2m2 0-.8 12.1A2 2 0 0 1 14.2 21H9.8a2 2 0 0 1-2-1.9L7 7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>' +
           '</div>' +
